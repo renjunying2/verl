@@ -1,0 +1,12 @@
+1. trainer.use_v1=True
+2. trainer.v1.trainer_mode=separate_async
+3. 训练资源:  （同步脚本）trainer.nnodes=4，trainer.n_gpus_per_node=16 -> （异步脚本）trainer.nnodes=2，trainer.n_gpus_per_node=16 
+4. 独立推理资源:  无；训练、推理共用四节点 -> actor_rollout_ref.rollout.nnodes=2，n_gpus_per_node=16 
+5. transfer_queue.enable: 未在同步脚本中启用 -> True 
+6. 队列容量: num_data_storage_units  未设置 -> 16（默认值 TRAINER_NNODES × 8） 
+7. parameter_sync_step:  不使用 -> 1 
+8. rollout.checkpoint_engine.backend: 同步脚本未指定 NCCL，走就地更新->nccl
+9. /verl/verl/experimental/separation/engine_workers.py中第93行: elif strategy in ["fsdp2", "veomni"]:->elif strategy in ["fsdp2", "veomni", "fsdp_turbo"]:
+	第154行：if strategy in ["fsdp2", "veomni"]: -> if strategy in ["fsdp2", "veomni", "fsdp_turbo"]:
+10. /mnt/share/r00947109/kimi-k3-megatron/verl/verl/workers/engine/fsdp/transformer_impl.py中第1128行：同步没有->加上weight_sync_mode = kwargs.pop("weight_sync_mode", "naive")
+	第1198行：if _is_kimi_packed_expert_param(name, param):->if _is_kimi_packed_expert_param(name, param) and weight_sync_mode == "naive":
