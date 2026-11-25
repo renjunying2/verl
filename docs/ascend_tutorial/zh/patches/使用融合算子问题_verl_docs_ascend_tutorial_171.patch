@@ -1,0 +1,1624 @@
+diff --git a/docs/ascend_tutorial/en/README.md b/docs/ascend_tutorial/en/README.md
+index b33f9578..17479b48 100644
+--- a/docs/ascend_tutorial/en/README.md
++++ b/docs/ascend_tutorial/en/README.md
+@@ -24,10 +24,12 @@ en/
+ - [Ascend Image Guide](./get_start/dockerfile_build_guidance.rst) - Build and use Docker images for the Ascend environment  
+ - [Ascend Installation Guide](./get_start/install_guidance.rst) - Custom installation of verl on Ascend NPUs                                                    
+ - [Ascend Quick Start Guide](./get_start/quick_start.rst) - Quick start for running verl on Ascend NPUs
++- [Ascend Installation Guide (950PR&950DT)](./get_start/install_guidance_950.rst) - Installation guide for Ascend 950PR&950DT products
+ 
+ ## Feature Support
+ 
+ - [Training Configuration Parameters and Metrics](./dev_guide/model_dev/parameter_and_metrics.md) - List of supported verl framework features/parameters
++- [Ascend Backend Feature Guide](./feature_support/ascend_backend_features.md) - Backend feature support descriptions for verl on NPU
+ - [NPU Advanced Features Guide](./feature_support/npu_advance_features.md) - Common NPU-related features/environment variables
+ 
+ ## Model Support
+@@ -44,7 +46,7 @@ en/
+     - [Model Evaluation](./dev_guide/model_dev/evaluation.md) - Model evaluation guide
+ - [Precision Debugging](https://github.com/verl-project/verl/tree/main/docs/ascend_tutorial/en/dev_guide/precision_analysis)
+     - [Precision Alignment Guide](./dev_guide/precision_analysis/precision_alignment.md) - Precision alignment guide
+-    - [Precision Debugger](../en/dev_guide/precision_analysis/precision_debugger.md) - Precision issue troubleshooting tool
++    - [Precision Debugger](./dev_guide/precision_analysis/precision_debugger.md) - Precision issue troubleshooting tool
+ - [Performance Tuning](https://github.com/verl-project/verl/tree/main/docs/ascend_tutorial/en/dev_guide/performance)
+     - [Ascend Performance Analysis Guide](./dev_guide/performance/ascend_performance_analysis_guide.md) - Performance analysis guide
+     - [Ascend Performance Tuning Guide](./dev_guide/performance/perf_tuning_on_ascend.rst) - Performance tuning guide
+diff --git a/docs/ascend_tutorial/en/contribution_guide/ascend_ci_guide.rst b/docs/ascend_tutorial/en/contribution_guide/ascend_ci_guide.rst
+index 0be1d8eb..63b4d576 100644
+--- a/docs/ascend_tutorial/en/contribution_guide/ascend_ci_guide.rst
++++ b/docs/ascend_tutorial/en/contribution_guide/ascend_ci_guide.rst
+@@ -71,7 +71,7 @@ Datasets and their absolute paths on the CI machines:
+ +--------------+----------------------------------------------------------------+
+ | geo3k        | ``${HOME}/.cache/modelscope/dataset/hiyouga/geometry3k``       |
+ +--------------+----------------------------------------------------------------+
+-| dapo-math-17k| ``$HOME/.cache/modelscope/dataset/dapo-math-17k.parquet``      |
++| dapo-math-17k| ``$HOME/.cache/modelscope/dataset/dapo-math-17k.parquet``    |
+ +--------------+----------------------------------------------------------------+
+ 
+ **Note**
+@@ -127,19 +127,19 @@ The main sections to modify include:
+      your_job_name:  # Unique identifier of the job
+        if: github.repository_owner == 'verl-project'  # Only run on the main repository
+        runs-on: linux-aarch64-a2-4  # Hardware specification: a2 instance, 4-card NPU
+-       timeout-minutes: 60          # Job timeout threshold (minutes)
++       timeout-minutes: 40          # Job timeout threshold (minutes)
+        container:
+          # Image to run; this example uses the vllm image
+          image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/verl/verl:latest-cann9.0.0-torch_npu2.9.0post2-910b-ubuntu22.04-py3.11-vllm
+-         options: >-
+-           --shm-size 16g  # Shared memory configuration
++         options: >-  # Shared memory configuration
++           --shm-size 16g
+        env:
+          HF_ENDPOINT: "https://hf-mirror.com"
+          HF_HUB_ENABLE_HF_TRANSFER: "0"
+        steps:
+          - name: Check npu and CANN info
+            run: |
+-             cat /usr/local/Ascend/ascend-toolkit/latest/"$(uname -i)"-linux/ascend_toolkit_install.info
++             cat /usr/local/Ascend/ascend-toolkit/latest/"$(uname -m)"-linux/ascend_toolkit_install.info
+              npu-smi info
+          - name: Check initial pip list from image
+            run: pip list
+@@ -175,7 +175,7 @@ Steps:
+ (1) Create or modify a unit test file (for example, ``test_xxx.py``) under the ``tests/`` directory.
+ (2) If the test file path is not excluded by the ``--ignore-glob`` rules in ``npu_unit_tests.yml``, it will be executed automatically by the following command:
+ 
+-   .. code-block:: yaml
++   .. code-block:: bash
+ 
+       pytest -s -x --ignore-glob="xxx" --ignore-glob="xxx" tests/
+ 
+diff --git a/docs/ascend_tutorial/en/dev_guide/model_dev/parameter_and_metrics.md b/docs/ascend_tutorial/en/dev_guide/model_dev/parameter_and_metrics.md
+index 0ab8a7c5..12c43fe4 100644
+--- a/docs/ascend_tutorial/en/dev_guide/model_dev/parameter_and_metrics.md
++++ b/docs/ascend_tutorial/en/dev_guide/model_dev/parameter_and_metrics.md
+@@ -117,11 +117,11 @@ The following parameters exist and have the same meaning in both the FSDP and Me
+ | `actor_rollout_ref.rollout.n` | `1` | Number of responses generated per prompt |
+ | `actor_rollout_ref.rollout.over_sample_rate` | `0` | Over-sampling rate |
+ | `actor_rollout_ref.rollout.multi_stage_wake_up` | `false` | Whether to enable multi-stage wake-up |
+-| `actor_rollout_ref.rollout.calculate_log_probs` | `false` | Whether to compute log probs in the rollout phase |
++| `actor_rollout_ref.rollout.calculate_log_probs` | `true` | Whether to compute log probs in the rollout phase |
+ | `actor_rollout_ref.rollout.skip_tokenizer_init` | `true` | Whether to skip tokenizer initialization |
+ | `actor_rollout_ref.rollout.enable_rollout_routing_replay` | `false` | Whether to enable rollout routing replay |
+-| `actor_rollout_ref.rollout.quantization` | `null` | Quantization method |
+-| `actor_rollout_ref.rollout.quantization_config_file` | `null` | Quantization config file path |
++| `actor_rollout_ref.rollout.quantization.linear` / `.moe` | `null` | Quantization method |
++| `actor_rollout_ref.rollout.quantization.config_file` | `null` | Quantization config file path |
+ | `actor_rollout_ref.rollout.layered_summon` | `false` | Whether to enable layered summon (FSDP scheme only) |
+ 
+ #### 1.1.5 Rollout Validation Sampling Configuration
+@@ -455,8 +455,8 @@ Same structure as the Actor FSDP engine configuration. The main differences:
+ 
+ | Parameter | Default | Description |
+ |--------|--------|------|
+-| `critic.model.fsdp_config.forward_only` | `false` | The Critic model needs to be trained |
+-| `critic.model.fsdp_config.use_remove_padding` | `false` | The Critic does not remove padding |
++| `critic.fsdp.forward_only` | `false` | The Critic model needs to be trained |
++| `critic.model.use_remove_padding` | `true` | The Critic does not remove padding |
+ 
+ The remaining parameters have the same default values as in the Actor FSDP engine configuration.
+ 
+diff --git a/docs/ascend_tutorial/en/dev_guide/model_dev/transfer_to_npu_guide.md b/docs/ascend_tutorial/en/dev_guide/model_dev/transfer_to_npu_guide.md
+index 94fb86e7..cd5fdad3 100644
+--- a/docs/ascend_tutorial/en/dev_guide/model_dev/transfer_to_npu_guide.md
++++ b/docs/ascend_tutorial/en/dev_guide/model_dev/transfer_to_npu_guide.md
+@@ -130,7 +130,7 @@ Investigation found that the lightning_indexer module has inconsistent implement
+ 
+ * **Missing (inference-side omission)**: the inference side is missing the scaling logic for `weights`. Referring to the standard implementations in the Megatron training side, slime, and transformers, all include this scaling, so it was added on the inference side to align the forward pass:
+ 
+-```
++```diff
+ weights, _ = self.weights_proj(x)
+ +weights = weights * (self.n_head**-0.5) * (self.head_dim**-0.5)
+ ```
+@@ -197,6 +197,8 @@ The corresponding configuration parameters are as follows:
+ actor_rollout_ref.rollout.enforce_eager=False
+ +actor_rollout_ref.rollout.engine_kwargs.vllm.compilation_config.cudagraph_mode="FULL_DECODE_ONLY"
+ +actor_rollout_ref.rollout.engine_kwargs.vllm.compilation_config.cudagraph_capture_sizes="[2, 4, 8, 16, 24, 32]"
++# Configure HCCL communication algorithm to AIV mode (environment variable, export before launching the service)
++export HCCL_OP_EXPANSION_MODE="AIV"
+ # CPU core binding
+ ++actor_rollout_ref.rollout.engine_kwargs.vllm.additional_config.enable_cpu_binding=True
+ # Enable async scheduling
+@@ -271,7 +273,7 @@ models = [
+ 
+ ### 5.4 Launch the Multi-Node Inference Server
+ 
+-Refer to the [vllm_ascend GLM5 Guide](https://github.com/vllm-project/vllm-ascend/blob/main/docs/source/tutorials/models/GLM5.md) to launch the two-node A3 inference service. `host_port` should be consistent with the configuration in the previous section, and `max_model_len` should be set to the sum of `max_prompt_length` and `max_response` during training.
++Refer to the [vllm_ascend GLM5 Guide](https://github.com/vllm-project/vllm-ascend/blob/main/docs/source/tutorials/models/GLM5.md). Note that GLM-5 has been discontinued since vLLM-Ascend v0.30.0; use the historical version documentation (for example v0.23.0) or switch to the supported GLM-5.1 weights and adjust `--served-model-name` and the port accordingly to launch the two-node A3 inference service. `host_port` should be consistent with the configuration in the previous section, and `max_model_len` should be set to the sum of `max_prompt_length` and `max_response_length` during training.
+ 
+ ### 5.5 Launch the vLLM Evaluation Task
+ 
+@@ -281,7 +283,7 @@ Run the following command to launch the online inference evaluation task, which
+ ais_bench --models vllm_api_stream_chat --datasets aime2025_gen_0_shot_chat_prompt
+ ```
+ 
+-After training, the model's core capability metrics achieved stable improvement: the evaluation score on the AIME2025 math-reasoning dataset rose steadily, and continuous score gains were also achieved on the GPQA graduate-level professional science dataset, with no knowledge degradation or catastrophic forgetting. The training optimization effect met expectations.
++After training, the model's core capability metrics achieved stable improvement: the evaluation score on the AIME2025 math-reasoning dataset improved overall from 47.5 to 52.5, and the GPQA graduate-level professional science dataset improved overall from 64.65 to 71.21, with small step-to-step fluctuations, with no knowledge degradation or catastrophic forgetting. The training optimization effect met expectations.
+ 
+ | Evaluation Dataset | GLM5-base | 10step | 15step | 40step | 50step |
+ | ---------- | --------- | ------ | ------ | ------ | ------ |
+diff --git a/docs/ascend_tutorial/en/dev_guide/performance/ascend_performance_analysis_guide.md b/docs/ascend_tutorial/en/dev_guide/performance/ascend_performance_analysis_guide.md
+index 027a2fec..a8ccd1ed 100644
+--- a/docs/ascend_tutorial/en/dev_guide/performance/ascend_performance_analysis_guide.md
++++ b/docs/ascend_tutorial/en/dev_guide/performance/ascend_performance_analysis_guide.md
+@@ -56,7 +56,7 @@ For the enabling and configuration tutorial, refer to: [Profiling Collection Gui
+ #### Performance Analysis
+ 
+ - **Operation**: Profiling data can be loaded using MindStudio Insight Windows or Linux version.
+-- **Value**: MindStudio Insight supports analyzing task scheduling efficiency, operator execution performance, compute resource utilization, collective communication performance, and so on Its Timeline view provides task decomposition and Overlap analysis capabilities (**a unique core feature of MindStudio, unavailable in NVIDIA and other competitors, and an essential tool for AI tuning**), and supports mouse-interactive analysis.
++- **Value**: MindStudio Insight supports analyzing task scheduling efficiency, operator execution performance, compute resource utilization, collective communication performance, and so on. Its Timeline view provides task decomposition and Overlap analysis capabilities (**a unique core feature of MindStudio, unavailable in NVIDIA and other competitors, and an essential tool for AI tuning**), and supports mouse-interactive analysis.
+ - **Demo**:
+ 
+ ![performance%20analysis](https://github.com/chengminhua/verl_data/raw/main/MindStudio_Insight_use/performance%20analysis.png)
+@@ -71,7 +71,7 @@ For the enabling and configuration tutorial, refer to: [Profiling Collection Gui
+ 
+ ![in-memory%20analytics](https://github.com/chengminhua/verl_data/raw/main/MindStudio_Insight_use/in-memory%20analytics.gif)
+ 
+-##### **Deep Memory Analysis with the msleaks Tool**
++##### **Deep Memory Analysis with the msLeaks Tool**
+ 
+ - **Steps**: Refer to the [msleaks tool usage guide](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/latest/devaids/msMemScope/docs/en/user_guide/memory_analysis.md).
+ - **Value**: You can view the framework memory allocation total line chart/memory block diagram, and directly map it to the call stack, enabling deep analysis of framework memory usage.
+@@ -113,7 +113,7 @@ As a negative example, consider Rmsnorm(fp16)+Cast(fp16->fp32)+Matmul(fp32). Alt
+ 
+ ### 3. Operator Performance Initial Diagnosis
+ 
+-You need to use `"./ASCEND_PROFILER_OUTPUT/operator_details.csv"` for analysis to determine whether an operator has a performance issue.
++You need to use `./ASCEND_PROFILER_OUTPUT/operator_details.csv` for analysis to determine whether an operator has a performance issue.
+ 
+ The Profiling tool computes the average busy time of these pipelines on different cores (xxx_time), divides it by the full kernel time of the slowest core (task_duration), and obtains the pipeline utilization (xxx_ratio). Although these pipelines depend on each other and the transfer-type pipelines compete for bandwidth, as long as the operator is properly designed, they can be mutually masked. Therefore, we can preliminarily consider that **when an operator's execution time is large enough, it should form a bound on one pipeline**, that is, the utilization should be high enough. Empirically, when a single operator takes 50μs, it can be considered that the operator should be on the bound pipeline, achieving 80%+ occupancy.
+ 
+@@ -143,7 +143,7 @@ When the operator shape is small, due to operator semantics, we may not be able
+ 
+ First, we clarify how many cores the current NPU card has. If you are not sure, the numbers like 20 and 40 in the profiling output indicate 20 cores; otherwise, it is 24 cores. Here, 24 cores actually represents a group consisting of one cube and two vectors. We can consider it as one cube acting as the master core, with two vectors as slave cores. If an operator is a pure vector operator, the concept of groups no longer applies; the 40 or 48 vector cores act as master cores and directly take logical tasks independently.
+ 
+-For vector operators in LLMs, one common core-splitting strategy is to split along the highest dimension, that is, the batch dimension, which is common in norm-type and dynamic-quantization-type operators that perform reduction on low dimensions (also called tail axis). The other is to flatten everything, allowing operators to be split very finely, such as elementwise operators. For the first type, we can focus on load balancing issues on the model side. For example, if we set a batch of 48 but the hardware has 40 vector cores, these 40 cores will loop twice, and in the second loop most cores will have nothing to do. This batch size can be considered unfriendly. If the batch is set to 64 or 80, performance is expected to be lossless. In the same situation, if it is a 48-core card, we can consider this a very friendly batch size.
++For vector operators in LLMs, one common core-splitting strategy is to split along the highest dimension, that is, the batch dimension, which is common in norm-type and dynamic-quantization-type operators that perform reduction on low dimensions (also called tail axis). The other is to flatten everything, allowing operators to be split very finely, such as elementwise operators. For the first type, we can focus on load balancing issues on the model side. For example, if we set a batch of 48 but the hardware has 40 vector cores, these 40 cores will loop twice, and in the second loop most cores will have nothing to do. This batch size can be considered unfriendly. If the batch is set to 80, performance is expected to be lossless. In the same situation, if it is a 48-core card, we can consider this a very friendly batch size.
+ 
+ For cube-type operators, the common core-splitting strategy is to split M and N by base (the K axis is the accumulation axis, and splitting on it introduces determinism issues). The most common blocking is baseM=128, baseN=256. In the decode phase, the time can basically be considered as all spent transferring weights, because the activation M is extremely small, and the M direction most likely has only one block, so the right matrix only needs to be transferred once. Therefore, within the range of M≤128, we can freely increase M with basically no performance loss. If M exceeds 128, (128, 256] can be considered the next performance tier.
+ Besides M, the tasks split on the N axis also affect operator affinity. Taking the MLA preprocessing in deepseekR1 as an example, it uses the same activation (shape [batch_size, 7168]) to do matrix multiplication with two weights (shapes [7168, 1536] and [7168, 576]). When batch_size cannot be made large, even if baseN is reduced to 128, the N axis still cannot use up all cores. So the time of these two matrix multiplications each is approximately equal to the time of multiplying the combined N axis of the weights (shape [7168, 2112]). If we only consider model competitiveness, we prefer to merge these two weights; otherwise, the bandwidth utilization of both small matrix multiplications will be very poor.
+diff --git a/docs/ascend_tutorial/en/dev_guide/performance/ascend_profiling.rst b/docs/ascend_tutorial/en/dev_guide/performance/ascend_profiling.rst
+index a0232716..fdea41d3 100644
+--- a/docs/ascend_tutorial/en/dev_guide/performance/ascend_profiling.rst
++++ b/docs/ascend_tutorial/en/dev_guide/performance/ascend_profiling.rst
+@@ -10,7 +10,7 @@ Configuration
+ 
+ Use two levels of profile settings to control data collection:
+ 
+-- Global collection control: Use parameters in verl/trainer/config/ppo_trainer.yaml (FSDP) or verl/trainer/config/ppo_megatron_trainer.yaml (MindSpeed) to control the collection mode and steps.
++- Global collection control: Use parameters in verl/trainer/config/ppo_trainer.yaml to control the collection mode and steps (for MindSpeed, the same file is used with model_engine=megatron; verl/trainer/config/ppo_megatron_trainer.yaml is deprecated and only read when you pass --config-name ppo_megatron_trainer).
+ - Role profile control: Use parameters in each role to control collection and other parameters.
+ 
+ Global Collection Control
+@@ -21,7 +21,7 @@ Use parameters in ppo_trainer.yaml to control the collection steps and mode:
+ -  global_profiler: Control the ranks and mode of profiling
+ 
+    -  tool: The profiling tool to use. Options are nsys, npu, torch,
+-      torch_memory.
++      torch_memory, precision_debugger.
+ 
+       -  nsys: NVIDIA's official system-level performance analysis tool.
+       -  npu: Huawei Ascend chip's native performance analysis tool.
+@@ -38,7 +38,7 @@ In each role's ``profiler`` field, you can control the collection mode for that
+ 
+ -  enable: Whether to enable profiling for this role.
+ -  all_ranks: Whether to collect data from all ranks.
+--  ranks: A list of ranks to collect data from. If empty, no data is collected.
++-  ranks: A list of ranks to collect data from. If empty, only rank 0 is collected (when enable is True).
+ -  tool_config: Configuration for the profiling tool used by this role.
+ 
+ Use parameters in each role's ``profiler.tool_config.npu`` to control specific collection behavior:
+@@ -92,7 +92,7 @@ End-to-End Collection
+                tool_config:
+                   npu:
+                      discrete: True
+-                     contents: [npu, cpu]  # Control collection list, default cpu, npu; can configure memory, shapes, module, and so on
++                     contents: [npu, cpu]  # Control collection list, default empty (only CPU activity is collected); can configure memory, shapes, module, and so on
+ 
+ Separation of Training and Inference Phases
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+@@ -459,7 +459,7 @@ The FSDP backend allows fine-grained control at the Micro-Batch level. Instrumen
+ 
+           def forward_backward_batch(self, data: TensorDict, loss_function, forward_only=False):
+ 
+-  +           role = "Ref" if forward_only and not self.optimizer_config else "Actor"
++  +           role = "Ref" if getattr(self.engine_config, "forward_only", False) else "Actor"
+   +           # Prepare profiler (same configuration as above, omitted)
+   +           experimental_config = torch_npu.profiler._ExperimentalConfig(...)
+   +           self.prof_npu = torch_npu.profiler.profile(
+diff --git a/docs/ascend_tutorial/en/dev_guide/performance/perf_tuning_on_ascend.rst b/docs/ascend_tutorial/en/dev_guide/performance/perf_tuning_on_ascend.rst
+index cc727253..9bf51e15 100644
+--- a/docs/ascend_tutorial/en/dev_guide/performance/perf_tuning_on_ascend.rst
++++ b/docs/ascend_tutorial/en/dev_guide/performance/perf_tuning_on_ascend.rst
+@@ -46,6 +46,7 @@ Parameter description:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ torch_npu interface:  ``torch_npu.npu_rms_norm(self, gamma, epsilon=1e-06) -> (Tensor, Tensor)`` 
++
+ Parameter description: 
+ 
+ - self: Tensor type, shape supports 1-8 dimensions.
+diff --git a/docs/ascend_tutorial/en/dev_guide/precision_analysis/precision_debugger.md b/docs/ascend_tutorial/en/dev_guide/precision_analysis/precision_debugger.md
+index 7a540270..8ebcff3b 100644
+--- a/docs/ascend_tutorial/en/dev_guide/precision_analysis/precision_debugger.md
++++ b/docs/ascend_tutorial/en/dev_guide/precision_analysis/precision_debugger.md
+@@ -7,6 +7,7 @@ This guide explains how to collect precision data in verl using the
+ 
+ ## Prerequisites
+ 
++* Before importing msprobe on NPU, follow the installation guide to mount the driver/CANN libraries and source the installed CANN `set_env.sh`, then verify `python -c "import torch, torch_npu; print(torch.npu.is_available())"` returns `True` (a missing `libhccl.so` indicates an incomplete CANN environment).
+ * Install `msprobe` in the training environment:
+ 
+ ```bash
+@@ -17,7 +18,7 @@ pip install mindstudio-probe
+ * Enable profiler for the roles you want to collect.
+ 
+ Reference:
+-* `https://gitcode.com/Ascend/msprobe.git`
++* [MindStudio-Probe](https://gitcode.com/Ascend/MindStudio-Probe)
+ 
+ ## Configuration
+ 
+@@ -53,7 +54,7 @@ global_profiler:
+ 
+ Notes:
+ 
+-* `global_profiler.steps` is the only step filter for PrecisionDebugger.
++* `global_profiler.steps` is the only step filter on the verl side. The `step` field in msprobe `config.json` also participates in filtering and should stay empty (`[]`); otherwise the two filters stack.
+ * Dumps are written under `global_profiler.save_path`.
+ * Actual dump path is `{global_profiler.save_path}/step_{global_step}/{stage}`.
+ * Do not set `dump_path` in `config.json`; output path is controlled by verl.
+@@ -139,7 +140,7 @@ run, the most common useful combinations are:
+ ## Minimal example
+ 
+ The following example enables PrecisionDebugger on steps `1` and `2`.
+-If you need rank filtering, configure it only in msprobe `config.json`.
++Rank filtering works at two layers: verl role-level `profiler.ranks`/`profiler.all_ranks` decides which ranks enter profiling, and the `rank` field in msprobe `config.json` decides which ranks are dumped.
+ 
+ ```yaml
+ global_profiler:
+@@ -223,6 +224,8 @@ Verl does **not** manually call `debugger.step()` in the current integration.
+ Instead, each stage writes to its own dump directory and resets msprobe runtime
+ status after `stop()` to avoid stale `dump.json` cache growth across stages.
+ 
++For L0 collection, PrecisionDebugger must bind to the actual model used in the stage; pass the actual model to `debugger.start(model=...)`, otherwise msprobe raises "missing the parameter 'model'". The examples below use `L1`; switch `level` to `L0` for L0 collection.
++
+ For L0 collection, PrecisionDebugger must bind to the actual model used in the
+ stage. The profiler resolves the model inside
+ `verl/utils/profiler/precision_debugger_profile.py` and supports both legacy
+@@ -270,7 +273,7 @@ profiled steps.
+ | L1 | `Qwen2-0.5B` | `actor_update` | per step | about `5.1-5.2 MB` |
+ | L1 | `Qwen2-0.5B` | `actor_compute_log_prob` | per step | about `2.6 MB` |
+ | L1 | `Qwen2-0.5B` | `ref_compute_log_prob` | per step | about `2.6 MB` |
+-| L0 | `Qwen2-0.5B` | `actor_compute_log_prob`, `ref_compute_log_prob`, `actor_update` | total for `step_1` and `step_2` | `8.8 MB` |
++| L0 | `Qwen2-0.5B` | `actor_compute_log_prob`, `ref_compute_log_prob`, `actor_update` | total for `step_1` and `step_2` (actor/ref stages only; `compute_values` and `critic_update` are not included) | `8.8 MB` |
+ | L0 | `Qwen2-0.5B` | `actor_compute_log_prob`, `ref_compute_log_prob`, `actor_update` | per step | about `4.4 MB` |
+ | L0 | `Qwen2-0.5B` | `actor_update` | per step | about `2.5 MB` |
+ | L0 | `Qwen2-0.5B` | `actor_compute_log_prob` | per step | about `1.1 MB` |
+@@ -303,8 +306,8 @@ Example compare usage:
+ 
+ ```bash
+ msprobe compare \
+-  --target-path /path/to/target_dump/dump.json \
+-  --golden-path /path/to/golden_dump/dump.json
++  --target_path /path/to/target_dump/dump.json \
++  --golden_path /path/to/golden_dump/dump.json
+ ```
+ 
+ You can compare:
+diff --git a/docs/ascend_tutorial/en/faq/faq.rst b/docs/ascend_tutorial/en/faq/faq.rst
+index 258ea5a3..9becd60b 100644
+--- a/docs/ascend_tutorial/en/faq/faq.rst
++++ b/docs/ascend_tutorial/en/faq/faq.rst
+@@ -106,7 +106,7 @@ Taking ``model.embed_tokens.weight`` from this example:
+ 
+    Tensor shape: torch.Size([151936, 4096])
+    Data type: torch.float32 (4 bytes)
+-   Weight size = 151936 × 4096 × 4 = 2,483,027,968 bytes ≈ 2369 MB
++   Weight size = 151936 × 4096 × 4 = 2,489,319,424 bytes ≈ 2374 MB
+ 
+    Default bucket size = 2048 MB < 2369 MB → assertion failure triggered
+ 
+diff --git a/docs/ascend_tutorial/en/feature_support/ascend_backend_features.md b/docs/ascend_tutorial/en/feature_support/ascend_backend_features.md
+index 1a9bc25c..b817b6a9 100644
+--- a/docs/ascend_tutorial/en/feature_support/ascend_backend_features.md
++++ b/docs/ascend_tutorial/en/feature_support/ascend_backend_features.md
+@@ -1,5 +1,4 @@
+ # Ascend Backend Feature Guide
+-==================================================================================
+ 
+ Last updated: 03/03/2026.
+ 
+@@ -37,7 +36,7 @@ Ascend supports the vLLM inference backend through the vllm-ascend plugin, which
+ | `max_num_batched_tokens`| `actor_rollout_ref.rollout.max_num_batched_tokens` | The maximum total number of tokens that can be processed in a single batch |
+ | `skip_tokenizer_init`| `actor_rollout_ref.rollout.skip_tokenizer_init` | Skip tokenizer initialization and pass input_ids into the inference request |
+ | `enable_prefix_caching` | `actor_rollout_ref.rollout.enable_prefix_caching` | Used to enable automatic prefix caching |
+-| `quantization`| `actor_rollout_ref.rollout.quantization`, default is None | `Quantization method` |
++| `quantization`| `actor_rollout_ref.rollout.engine_kwargs.vllm.quantization`, default is None | `Quantization method` |
+ 
+ ### 2. sglang:
+ 
+@@ -74,7 +73,7 @@ The following lists common sglang feature parameters configured in verl. For mor
+ | log_level| None, default set to error | The log level of the logger |
+ | skip_tokenizer_init| actor_rollout_ref.rollout.skip_tokenizer_init | Skip tokenizer initialization and pass input_ids into the inference request |
+ | skip_server_warmup| None, default set to True | Skip warmup |
+-| quantization| actor_rollout_ref.rollout.quantization, default is None| Quantization method |
++| quantization| actor_rollout_ref.rollout.engine_kwargs.sglang.quantization, default is None| Quantization method |
+ | attention_backend|actor_rollout_ref.rollout.engine_kwargs.sglang.attention_backend| Attention kernel, should be set to ascend on NPU |
+ 
+ ---
+@@ -126,7 +125,7 @@ MindSpeed's underlying replacement principle uses the Monkey Patch technique
+ 
+ In verl, the patch is triggered by `from mindspeed.megatron_adaptor import repatch  `, with the call stack as follows:
+ 
+-~~~
++~~~text
+ from mindspeed.megatron_adaptor import repatch
+ ├── Execute megatron_adaptor.py module import
+ ├── Import features_manager module
+@@ -159,6 +158,8 @@ def apply_patch(self):
+     # Apply all decorators  
+     for wrapper in self.wrappers:  
+         final_patch_func = wrapper(final_patch_func)
++
++    return final_patch_func
+ ~~~
+ 
+ * MindSpeedPatchesManager Class
+@@ -255,7 +256,7 @@ class MindSpeedFeature:
+ | `actor_rollout_ref.actor.megatron.pipeline_model_parallel_size`  | Pipeline parallelism size, default value is 1 |
+ | `actor_rollout_ref.actor.megatron.expert_model_parallel_size` | Expert parallelism size, default value is 1 |
+ | `actor_rollout_ref.actor.megatron.expert_tensor_parallel_size`| TP-extended EP size, default value is null |
+-| `actor_rollout_ref.actor.context_parallel_size`| Sequence parallelism size, default value is 1 |
++| `actor_rollout_ref.actor.megatron.context_parallel_size`| Context parallelism size, default value is 1 |
+ | `actor_rollout_ref.actor.megatron.override_transformer_config.deallocate_pipeline_outputs`| After tensors are sent to the next PP stage, the output data is released to reduce peak memory, default value is False |
+ | `actor_rollout_ref.actor.megatron.override_transformer_config.persist_layer_norm` | Whether to use persistent LayerNorm, default value is False |
+ | `actor_rollout_ref.actor.megatron.override_transformer_config.moe_grouped_gemm` | Whether to use Group GEMM, default value is False |
+@@ -309,7 +310,7 @@ VeOmni is a unified reinforcement learning training backend designed for efficie
+ 
+ #### Router Replay Support
+ 
+-The VeOmni backend supports the Router Replay feature for MoE models, configured through `actor_rollout_ref.actor.veomni.router_replay`:
++The VeOmni backend supports the Router Replay feature for MoE models, configured through `actor_rollout_ref.actor.veomni.router_replay`. Enabling a non-`disabled` mode also requires `actor_rollout_ref.actor.use_remove_padding=True`; otherwise verl raises a RuntimeError when the actor config is instantiated:
+ 
+ | Parameter | Description |
+ | --- | --- |
+diff --git a/docs/ascend_tutorial/en/get_start/dockerfile_build_guidance.rst b/docs/ascend_tutorial/en/get_start/dockerfile_build_guidance.rst
+index bde43dd7..b03bd22a 100644
+--- a/docs/ascend_tutorial/en/get_start/dockerfile_build_guidance.rst
++++ b/docs/ascend_tutorial/en/get_start/dockerfile_build_guidance.rst
+@@ -22,6 +22,14 @@ The vLLM image for verl v0.9.1 uses CANN 9.1.0, Python 3.12, and vLLM 0.23.0, su
+ 
+ 
+ Image Hardware Support
++
++The following table lists the hardware series and the corresponding Dockerfile/image families:
++
++- Atlas A2 training products: `Dockerfile.ascend_9.2.1_a2`, `latest-vllm-910b-ubuntu`
++- Atlas A3 training products: `Dockerfile.ascend_9.2.1_a3`, `latest-vllm-a3-ubuntu`
++- Ascend 950PR&950DT products: `Dockerfile.ascend_9.2.1_a5`, `latest-vllm-950-ubuntu`
++
++Verify the minimum driver/firmware versions against the matching CANN release before building.
+ -----------------------------------
+ 
+ Atlas 200T A2 Box16
+diff --git a/docs/ascend_tutorial/en/get_start/install_guidance.rst b/docs/ascend_tutorial/en/get_start/install_guidance.rst
+index 0e333d8d..221aa9b3 100644
+--- a/docs/ascend_tutorial/en/get_start/install_guidance.rst
++++ b/docs/ascend_tutorial/en/get_start/install_guidance.rst
+@@ -134,7 +134,7 @@ CANN is the heterogeneous computing architecture on NPU. Below are the A3 instal
+    # Install dependencies & configure source
+    sudo yum makecache
+    sudo yum install -y gcc python3 python3-pip kernel-headers-$(uname -r) kernel-devel-$(uname -r)
+-   sudo curl https://repo.oepkgs.net/ascend/cann/ascend.repo -o /etc/yum.repos.d/ascend.repo && yum makecache
++   sudo curl https://repo.oepkgs.net/ascend/cann/ascend.repo -o /etc/yum.repos.d/ascend.repo && sudo yum makecache
+    # Install NPU driver
+    sudo yum install -y Atlas-A3-hdk-npu-driver-26.2.rc1
+    # Install Toolkit; use --install-path to customize the installation path
+@@ -224,7 +224,7 @@ CANN is the heterogeneous computing architecture on NPU. Below are the A3 instal
+    # Install dependencies & configure source
+    sudo yum makecache
+    sudo yum install -y gcc python3 python3-pip kernel-headers-$(uname -r) kernel-devel-$(uname -r)
+-   sudo curl https://repo.oepkgs.net/ascend/cann/ascend.repo -o /etc/yum.repos.d/ascend.repo && yum makecache
++   sudo curl https://repo.oepkgs.net/ascend/cann/ascend.repo -o /etc/yum.repos.d/ascend.repo && sudo yum makecache
+    # Install NPU driver
+    sudo yum install -y Atlas-A3-hdk-npu-driver-25.5.0
+    # Install Toolkit; use --install-path to customize the installation path
+diff --git a/docs/ascend_tutorial/en/get_start/quick_start.rst b/docs/ascend_tutorial/en/get_start/quick_start.rst
+index 6d7f9fa6..d41a69b3 100644
+--- a/docs/ascend_tutorial/en/get_start/quick_start.rst
++++ b/docs/ascend_tutorial/en/get_start/quick_start.rst
+@@ -67,7 +67,7 @@ Data Preparation
+ 
+    The following files are generated:
+ 
+-      .. code-block:: text
++      .. code-block:: bash
+ 
+          ~/data/gsm8k/train.parquet
+          ~/data/gsm8k/test.parquet
+@@ -157,4 +157,4 @@ If you need to convert a vLLM backend inference script to SGLang yourself, you n
+    ++actor_rollout_ref.rollout.engine_kwargs.sglang.moe_a2a_backend="deepep" \
+ 
+    # Must be set to True for multi-DP with MoE models (default is False)
+-   +actor_rollout_ref.rollout.engine_kwargs.sglang.enable_dp_attention=False \
++   +actor_rollout_ref.rollout.engine_kwargs.sglang.enable_dp_attention=True \
+diff --git a/docs/ascend_tutorial/en/model_support/examples/ascend_retool_best_practice.rst b/docs/ascend_tutorial/en/model_support/examples/ascend_retool_best_practice.rst
+index d6d6dd9e..4e7614e6 100644
+--- a/docs/ascend_tutorial/en/model_support/examples/ascend_retool_best_practice.rst
++++ b/docs/ascend_tutorial/en/model_support/examples/ascend_retool_best_practice.rst
+@@ -58,8 +58,8 @@ Model Training and Evaluation
+ -----------------------------------
+ 1. Model Data Preparation
+ ^^^^^^^^^^^^^^^^^^^^^^^^^
+-`Qwen2.5-7B`
+-^^^^^^^^^^^^
++``Qwen2.5-7B``
++""""""""""""""
+ **Download Model Weights**
+ 
+ .. code-block:: bash
+@@ -70,7 +70,7 @@ Model Training and Evaluation
+ 
+ .. code-block:: bash
+ 
+-  git clone https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k
++  git clone https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k dataset/BytedTsinghua-SIA/DAPO-Math-17k
+ 
+ **Download Evaluation Dataset**
+ 
+@@ -101,6 +101,7 @@ Model Training and Evaluation
+       --target_dir /PATH/TO/checkpoint/multiturn-sft-qwen-2.5-7b-instruct/global_step_372/huggingface
+ 
+ 2. Code Sandbox Preparation
++^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 
+ The open-source sandbox code and deployment reference can be found at
+ https://github.com/bytedance/SandboxFusion
+@@ -128,6 +129,7 @@ https://github.com/bytedance/SandboxFusion
+   make run-online
+ 
+ 3. Training
++^^^^^^^^^^^
+ 
+ The example configuration file is as follows. Create a run_qwen2.5_7b_dapo_npu.sh in the recipe/retool directory.
+ Modify the following parameters in the model training script according to your actual path configuration.
+@@ -277,5 +279,4 @@ Modify the following parameters in the model training script according to your a
+     actor_rollout_ref.ref.use_torch_compile=False \
+     actor_rollout_ref.actor.entropy_checkpointing=True \
+     actor_rollout_ref.ref.entropy_checkpointing=True \
+-    actor_rollout_ref.ref.use_torch_compile=False \
+     trainer.total_epochs=1 $@ > $LOG_FILE 2>&1 &
+diff --git a/docs/ascend_tutorial/en/model_support/examples/ascend_sglang_best_practices.rst b/docs/ascend_tutorial/en/model_support/examples/ascend_sglang_best_practices.rst
+index a66d02c8..fc6da052 100644
+--- a/docs/ascend_tutorial/en/model_support/examples/ascend_sglang_best_practices.rst
++++ b/docs/ascend_tutorial/en/model_support/examples/ascend_sglang_best_practices.rst
+@@ -3,8 +3,9 @@ Ascend SGLang Best Practices
+ 
+ Last updated: 06/02/2026.
+ 
+-.. _Qwen3-30B: https://github.com/verl-project/verl/blob/main/examples/ascend_extras/grpo_trainer/run_qwen3_30b_a3b_megatron.sh
++.. _qwen3-30b-script: https://github.com/verl-project/verl/blob/main/examples/ascend_extras/grpo_trainer/run_qwen3_30b_a3b_megatron.sh
+ .. _doclink: https://github.com/verl-project/verl/blob/c98cb8cc/docs/ascend_tutorial/examples/ascend_sglang_best_practices.rst
++
+ Introduction
+ ----------------------------------
+ 
+@@ -22,7 +23,7 @@ The example model script and its required hardware conditions are as follows:
+ +----------------------+---------------------+--------+------------------------------+
+ | Model                | NPU Model           | Nodes  | Training/Inference Backend   |
+ +======================+=====================+========+==============================+
+-| `Qwen3-30B`_         | Atlas 800T A3       | 1      | SGLang + Megatron            |
++| ``Qwen3-30B``        | Atlas 800T A3       | 1      | SGLang + Megatron            |
+ +----------------------+---------------------+--------+------------------------------+
+ 
+ Environment Setup
+@@ -39,7 +40,7 @@ Model Training and Evaluation
+ -----------------------------------
+ 1. Model Data Preparation
+ ^^^^^^^^^^^^^^^^^^^^^^^^^
+-`Qwen3-30B`_
++``Qwen3-30B``
+ ^^^^^^^^^^^^^
+ **Download Model Weights**
+ 
+@@ -54,7 +55,8 @@ Model Training and Evaluation
+ 
+ .. code-block:: bash
+ 
+-  git clone https://www.modelscope.cn/datasets/AI-ModelScope/DAPO-Math-17k.git
++  git lfs install
++git clone https://www.modelscope.cn/datasets/AI-ModelScope/DAPO-Math-17k.git
+ 
+ **HuggingFace To Megatron Weight Conversion (Optional)**
+ 
+@@ -90,7 +92,7 @@ Modify the following parameters in the model training script according to your a
+     #Save frequency, -1 means no save by default; modify this parameter if evaluation is needed
+     trainer.save_freq=-1
+ 
+-For single-node tasks `Qwen3-30B`_, you can directly run the example script from the verl repository with bash.
++For single-node tasks, use the `Qwen3-30B script <https://github.com/verl-project/verl/blob/main/examples/ascend_extras/grpo_trainer/run_qwen3_30b_a3b_megatron.sh>`_, you can directly run the example script from the verl repository with bash.
+ 
+ .. code-block:: bash 
+ 
+@@ -261,7 +263,7 @@ Open the benchmark/ais_bench/benchmark/configs/models/vllm_api/vllm_api_stream_c
+ After training, the model's score on Math-500 improved significantly.
+ 
+ +------+----------------------+---------+----------+------+----------------------+
+-| iter | dataset              | version | metric   | mode | sgl-api-stream-chat  |
++| iter | dataset              | version | metric   | mode | vllm-api-stream-chat |
+ +======+======================+=========+==========+======+======================+
+ |   0  | math_prm800k_500     | c4b6f0  | accuracy | gen  | 	84.4             |
+ +------+----------------------+---------+----------+------+----------------------+
+diff --git a/docs/ascend_tutorial/en/model_support/examples/ascend_vllm_best_practices.rst b/docs/ascend_tutorial/en/model_support/examples/ascend_vllm_best_practices.rst
+index 91c0b69b..2622ed84 100644
+--- a/docs/ascend_tutorial/en/model_support/examples/ascend_vllm_best_practices.rst
++++ b/docs/ascend_tutorial/en/model_support/examples/ascend_vllm_best_practices.rst
+@@ -5,6 +5,7 @@ Last updated: 06/06/2026.
+ 
+ .. _Qwen3-30B: https://github.com/verl-project/verl/blob/release/v0.7.1/examples/grpo_trainer/run_qwen3moe-30b_grpo_megatron_vllm_npu.sh
+ .. _doclink: https://github.com/verl-project/verl/blob/main/docs/ascend_tutorial/en/model_support/examples/ascend_vllm_best_practices.rst
++
+ Introduction
+ ----------------------------------
+ 
+@@ -85,7 +86,7 @@ Modify the following parameters in the model training script according to your a
+     CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
+ 
+     # File System Paths
+-    TRAIN_FILE=$RAY_DATA_HOME/dataset/gsm8k/test.parquet
++    TRAIN_FILE=$RAY_DATA_HOME/dataset/gsm8k/train.parquet
+     TEST_FILE=$RAY_DATA_HOME/dataset/gsm8k/test.parquet
+ 
+     #Save frequency, -1 means no save by default; modify this parameter if evaluation is needed
+diff --git a/docs/ascend_tutorial/en/model_support/examples/dapo_multi_model_optimization_practice.md b/docs/ascend_tutorial/en/model_support/examples/dapo_multi_model_optimization_practice.md
+index 47245d5e..c1d42eaf 100644
+--- a/docs/ascend_tutorial/en/model_support/examples/dapo_multi_model_optimization_practice.md
++++ b/docs/ascend_tutorial/en/model_support/examples/dapo_multi_model_optimization_practice.md
+@@ -17,7 +17,7 @@ In verl, you can make the following settings to run the DAPO algorithm.
+   In the DAPO algorithm, this must be configured as dapo.
+ 
+ ```bash
+-reward_model.reward_manager.name=dapo
++reward.reward_manager.name=dapo
+ ```
+ 
+ - **Clip-Higher**
+@@ -25,7 +25,7 @@ reward_model.reward_manager.name=dapo
+ 
+ ```bash
+ clip_ratio_low=0.2  # Lower clip ratio bound, default value is 0.2
+-clip_ratio_high=0.28 # Upper clip ratio bound, default value is 0.28
++clip_ratio_high=0.28 # Upper clip ratio bound, DAPO override; the verl default is 0.2
+ ```
+ 
+ - **Dynamic Sampling Configuration**
+@@ -51,9 +51,9 @@ actor_rollout_ref.actor.loss_agg_mode=${loss_agg_mode}
+   Setting `overlong_buffer.enable` to `True` penalizes outputs whose length is too long but still within the hard context limit. Specifically, when the output length exceeds `max_response_length - overlong_buffer.len` and exceeds by 0 to `overlong_buffer.len` tokens, the penalty value increases linearly from `0` to `overlong_buffer.penalty_factor`.
+ 
+ ```bash
+-reward_model.overlong_buffer.enable=${enable_overlong_buffer} # Enable overlong buffer penalty, enable the penalty mechanism for overlong outputs
+-reward_model.overlong_buffer.len=${overlong_buffer_len}  # Buffer length, defines the buffer tokens, maximum penalty strength
+-reward_model.overlong_buffer.penalty_factor=${overlong_penalty_factor}   # Penalty factor, maximum penalty strength
++reward.reward_kwargs.overlong_buffer_cfg.enable=${enable_overlong_buffer} # Enable overlong buffer penalty, enable the penalty mechanism for overlong outputs
++reward.reward_kwargs.overlong_buffer_cfg.len=${overlong_buffer_len}  # Buffer length, defines the buffer tokens, maximum penalty strength
++reward.reward_kwargs.overlong_buffer_cfg.penalty_factor=${overlong_penalty_factor}   # Penalty factor, maximum penalty strength
+ ```
+ 
+ For the code involving these parameters, refer to: [Recipe: Decoupled Clip and Dynamic Sampling Policy Optimization (DAPO)](https://github.com/verl-project/verl-recipe/blob/main/dapo/README.md)
+@@ -61,7 +61,7 @@ For the code involving these parameters, refer to: [Recipe: Decoupled Clip and D
+ ## Hardware Requirements
+ 
+ 
+-Currently, Atlas 800T A3 and Atlas 900 A3 SuperPoD are supported. Completing this best practice requires 1 Atlas 900 A3 SuperPoD. For key software versions, refer to: [Ascend Quick Start Guide](../../get_start/quick_start.rst)
++Currently, Atlas 800T A3 and Atlas 900 A3 SuperPoD are supported. Completing this best practice requires 1 Atlas 900 A3 SuperPoD. For key software versions, refer to: [Ascend Installation Guide](../../get_start/install_guidance.rst)
+ 
+ 
+ ## Installing the Base Environment
+@@ -78,7 +78,7 @@ Currently, Atlas 800T A3 and Atlas 900 A3 SuperPoD are supported. Completing thi
+ | vllm-ascend   | v0.18.0                                                    |
+ | transformers  | 5.3.0                                                      |
+ 
+-In this practice, we specify a verl commit id to avoid introducing other issues. Note: The main branch may cause patch issues due to iterative refactoring. For a stable version, switch to `release/v0.8.0`.
++In this practice, both verl and the `recipe` submodule are taken from the `main` branch; check out the verl commit pinned in `recipe/dapo/REQUIRED_VERL.txt` to avoid version mismatch. Note: The main branch may cause patch issues due to iterative refactoring. For a stable version, switch to `release/v0.8.0`.
+ 
+ ```bash
+ cd verl
+@@ -184,11 +184,11 @@ RAY_DATA_HOME=${RAY_DATA_HOME:-"${HOME}/verl"}
+ CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
+ 
+ # File System Paths
+-TRAIN_FILE=$RAY_DATA_HOME/datasets/geo3k/train.parquet
+-TEST_FILE=$RAY_DATA_HOME/datasets/geo3k/test.parquet
++TRAIN_FILE=$RAY_DATA_HOME/data/geo3k/train.parquet
++TEST_FILE=$RAY_DATA_HOME/data/geo3k/test.parquet
+ 
+ # Save frequency, -1 means no saving by default. Modify this parameter if evaluation is needed.
+-trainer.save_freq=-1
++# Pass trainer.save_freq=-1 as a Hydra override on the training command line, not as a shell variable.
+ ```
+ 
+ - For single-node Qwen3-VL-30B tasks, use the following script to launch training.
+@@ -326,7 +326,7 @@ actor_rollout_ref.rollout.log_prob_max_token_len_per_gpu=${infer_ppo_max_token_l
+ ```
+ 
+ - **Micro-batch Size per GPU**
+-  When `use_dynamic_bsz=True`, the framework uses this value as the initial batch size, then adjusts up/down based on `ppo_max_token_len_per_gpu`
++  When `use_dynamic_bsz=True`, this value is not used; the framework derives the number of micro-batches from `ppo_max_token_len_per_gpu`
+ 
+ ```bash
+ actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2
+diff --git a/docs/ascend_tutorial/en/model_support/examples/gspo_optimization_practice.md b/docs/ascend_tutorial/en/model_support/examples/gspo_optimization_practice.md
+index e62f8813..4d4e51ad 100644
+--- a/docs/ascend_tutorial/en/model_support/examples/gspo_optimization_practice.md
++++ b/docs/ascend_tutorial/en/model_support/examples/gspo_optimization_practice.md
+@@ -221,6 +221,7 @@ Optimization covers four aspects: training, inference, scheduling, and others.
+ #### Dynamic bsz
+ 
+ ```bash
++max_prompt_length=${max_prompt_length:-2048}; max_response_length=${max_response_length:-8192}; sp_size=${sp_size:-4}
+ actor_ppo_max_token_len=$(((max_prompt_length + max_response_length) / sp_size))
+ infer_ppo_max_token_len=$(((max_prompt_length + max_response_length) / sp_size))
+ ```
+diff --git a/docs/ascend_tutorial/en/model_support/examples/qwen3_5_megatron_npu.md b/docs/ascend_tutorial/en/model_support/examples/qwen3_5_megatron_npu.md
+index e203c482..1f3be39a 100644
+--- a/docs/ascend_tutorial/en/model_support/examples/qwen3_5_megatron_npu.md
++++ b/docs/ascend_tutorial/en/model_support/examples/qwen3_5_megatron_npu.md
+@@ -22,14 +22,14 @@ Use the dependency combination from the [vLLM NPU Installation Script](../../../
+ | Megatron-Bridge | `v0.5.0` |
+ | MindSpeed-Bridge | repository default branch (no fixed tag/commit) |
+ 
+-The installation script also installs TransformerEngineNPU and MindSpeed-Ops. You can install according to the [Ascend Installation Guide](../../get_start/install_guidance.rst), or use an A3 vLLM image consistent with this combination.
++The installation script also installs TransformerEngineNPU and MindSpeed-Ops. Note that the linked [Ascend Installation Guide](../../get_start/install_guidance.rst) states the 0.30.0 dependency set currently cannot satisfy both constraint sets (vLLM requires `fastapi>=0.133.0,<0.137.0` while vLLM-Ascend requires `<0.124.0`); for a runnable environment use the published verl v0.9.1 image with its matching vLLM 0.23.0 stack, or first select upstream-compatible revisions and verify with `pip check` and a serving smoke test.
+ 
+ ## Models and Scripts
+ 
+ | model             | HF model | script |
+ |-------------------| --- | --- |
+ | Qwen3.5-35B-A3B   | `Qwen/Qwen3.5-35B-A3B` | `examples/grpo_trainer/run_qwen3_5_35b_megatron.sh` |
+-| Qwen3.5-122B-A10B | `Qwen/Qwen3.5-122B-A10B` | `examples/grpo_trainer/run_qwen3_5_122b_a10b_megatron.sh` |
++| Qwen3.5-122B-A10B | `Qwen/Qwen3.5-122B-A10B` | `examples/ascend_extras/grpo_trainer/run_qwen3_5_122b_a10b_32k_megatron.sh` |
+ | Qwen3.5-397B-A17B | `Qwen/Qwen3.5-397B-A17B` | `examples/grpo_trainer/run_qwen3_5_397b_megatron.sh` |
+ 
+ ## Hardware and Parallel Configuration
+@@ -94,8 +94,8 @@ If you need to override the data path:
+ ```bash
+ DEVICE=npu \
+ HF_MODEL_PATH=/path/to/Qwen3.5-35B-A3B \
+-train_path=/path/to/train.parquet \
+-test_path=/path/to/test.parquet \
++train_files=/path/to/train.parquet \
++test_files=/path/to/test.parquet \
+ bash examples/grpo_trainer/run_qwen3_5_35b_megatron.sh
+ ```
+ 
+@@ -105,7 +105,7 @@ bash examples/grpo_trainer/run_qwen3_5_35b_megatron.sh
+ export DEVICE=npu
+ export HF_MODEL_PATH=/path/to/Qwen3.5-122B-A10B
+ 
+-bash examples/grpo_trainer/run_qwen3_5_122b_a10b_megatron.sh
++bash examples/ascend_extras/grpo_trainer/run_qwen3_5_122b_a10b_32k_megatron.sh
+ ```
+ 
+ If you need to override data, save path, or parallel configuration:
+@@ -118,7 +118,7 @@ test_files=/path/to/test.parquet \
+ save_path=/path/to/checkpoints \
+ NDEVICES_PER_NODE=16 \
+ nnodes=4 \
+-bash examples/grpo_trainer/run_qwen3_5_122b_a10b_megatron.sh
++bash examples/ascend_extras/grpo_trainer/run_qwen3_5_122b_a10b_32k_megatron.sh
+ ```
+ 
+ ### Qwen3.5-397B-A17B
+diff --git a/docs/ascend_tutorial/en/model_support/model_and_algorithm_support.md b/docs/ascend_tutorial/en/model_support/model_and_algorithm_support.md
+index dfcc2466..dbd0e8fd 100644
+--- a/docs/ascend_tutorial/en/model_support/model_and_algorithm_support.md
++++ b/docs/ascend_tutorial/en/model_support/model_and_algorithm_support.md
+@@ -45,8 +45,8 @@ Last updated: 09/21/2026.
+ | 40 | Qwen3-1.7B | GRPO | [1.7B](https://huggingface.co/Qwen/Qwen3-1.7B) | VeOmni | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/verl_ascend_practice/run_qwen3_1_7b_npu.sh) | - | Atlas 800T A3 |
+ | 41 | Qwen3-30B-A3B | GRPO | [30B](https://huggingface.co/Qwen/Qwen3-30B-A3B) | VeOmni | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/grpo_trainer/run_qwen3_30b_veomni.sh) | - | Atlas 800T A3 |
+ | 42 | Qwen3-VL-30B-A3B-Instruct | GRPO | [30B](https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Instruct) | VeOmni | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/grpo_trainer/run_qwen3_vl_30b_moe_veomni.sh) | - | Atlas 800T A3 |
+-| 43 | DeepSeek-V4-Flash | GRPO | [284B](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash ) | MindSpeed-llm | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/DeepSeek-V4-Flash/examples/train_deepseek_v4_grpo_mindspeed_vllm.sh) | - | Atlas 800T A3 |
+-| 44 | DeepSeek-V4-Flash | GRPO | [284B](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash ) | MindSpeed-llm | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/DeepSeek-V4-Flash/examples/train_deepseek_v4_grpo_mindspeed_vllm_A5.sh) | - | Ascend 950PR & 950DT series products |
++| 43 | DeepSeek-V4-Flash | GRPO | [284B](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash) | MindSpeed-llm | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/DeepSeek-V4-Flash/examples/train_deepseek_v4_grpo_mindspeed_vllm.sh) | - | Atlas 800T A3 |
++| 44 | DeepSeek-V4-Flash | GRPO | [284B](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash) | MindSpeed-llm | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/DeepSeek-V4-Flash/examples/train_deepseek_v4_grpo_mindspeed_vllm_A5.sh) | - | Ascend 950PR & 950DT series products |
+ | 45 | Qwen3.8-27B | GRPO | [27B](https://huggingface.co/Qwen/Qwen3.8-27B) | Megatron | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/grpo_trainer/run_qwen3_8_27b_megatron.sh) | - | Atlas 800T A3 |
+ | 46 | GLM-5.2 | GRPO | [753B](https://huggingface.co/zai-org/GLM-5.2) | Megatron | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/ascend_extras/grpo_trainer/run_glm5_2_megatron.sh) | - | Atlas 800T A3 |
+ 
+diff --git a/docs/ascend_tutorial/zh/contribution_guide/ascend_ci_guide.rst b/docs/ascend_tutorial/zh/contribution_guide/ascend_ci_guide.rst
+index e6d62577..e4dcb1a3 100644
+--- a/docs/ascend_tutorial/zh/contribution_guide/ascend_ci_guide.rst
++++ b/docs/ascend_tutorial/zh/contribution_guide/ascend_ci_guide.rst
+@@ -70,7 +70,7 @@ NPU 相关的工作流主要包括：
+ +--------------+----------------------------------------------------------------+
+ | geo3k        | ``${HOME}/.cache/modelscope/dataset/hiyouga/geometry3k``       |
+ +--------------+----------------------------------------------------------------+
+-| dapo-math-17k| ``$HOME/.cache/modelscope/dataset/dapo-math-17k.parquet``      |
++| dapo-math-17k| ``$HOME/.cache/modelscope/dataset/dapo-math-17k.parquet``    |
+ +--------------+----------------------------------------------------------------+
+ 
+ **Note**
+@@ -131,7 +131,7 @@ NPU 相关的工作流主要包括：
+          #运行镜像 该示例为vllm的镜像
+          image: swr.cn-southwest-2.myhuaweicloud.com/base_image/ascend-ci/verl/verl:latest-cann9.0.0-torch_npu2.9.0post2-910b-ubuntu22.04-py3.11-vllm
+          options: >-
+-           --shm-size 16g  # 共享内存配置
++           --shm-size 16g
+        env:
+          HF_ENDPOINT: "https://hf-mirror.com"
+          HF_HUB_ENABLE_HF_TRANSFER: "0"
+@@ -174,9 +174,9 @@ NPU 相关的工作流主要包括：
+ (1) 在 ``tests/`` 目录下创建或修改单元测试文件（例如 ``test_xxx.py``）。
+ (2) 若测试文件路径未被 ``npu_unit_tests.yml`` 中的 ``--ignore-glob`` 规则排除，则会在以下命令中自动执行：
+ 
+-   .. code-block:: yaml
++   .. code-block:: bash
+    
+-      pytest -s -x --ignore-glob="xxx" --ignore-glob="xxx" tests/
++      pytest -s -x --ignore-glob="xxx" --ignore-glob="yyy" tests/
+    
+ (3) 若测试路径在 ``--ignore-glob`` 排除范围内，需在 ``npu_unit_tests.yml`` 中新增一个 step 来显式运行该测试。
+ (4) 如新增一批相关用例，建议单独创建专门的工作流文件以保持清晰。
+diff --git a/docs/ascend_tutorial/zh/dev_guide/model_dev/evaluation.md b/docs/ascend_tutorial/zh/dev_guide/model_dev/evaluation.md
+index b78a7d39..35a36fb7 100755
+--- a/docs/ascend_tutorial/zh/dev_guide/model_dev/evaluation.md
++++ b/docs/ascend_tutorial/zh/dev_guide/model_dev/evaluation.md
+@@ -55,7 +55,7 @@ vllm serve /path/to/Qwen3-30B/ \
+        --max-num-batched-tokens 22528 \
+        --enforce-eager \
+        --trust-remote-code \
+-       --distributed_executor_backend=mp \
++       --distributed-executor-backend=mp \
+        --tensor-parallel-size 8 \
+        --data-parallel-size 1 \
+        --generation-config vllm \
+@@ -64,10 +64,10 @@ vllm serve /path/to/Qwen3-30B/ \
+ 
+ **修改AISBench推理配置启动vllm_client评测**
+ 
+-打开推理配置文件 benchmark/ais_bench/benchmark/configs/models/vllm_api/vllm_api_stream_chat.py 
++打开推理配置文件 ais_bench/benchmark/configs/models/vllm_api/vllm_api_stream_chat.py
+ 
+-host_port需与服务端的port一致，根据模型配置修改max_seq_len和max_out_len
+-~~~bash
++host_port需与服务端的port一致，根据模型配置修改model（设为auto）、path（填写模型路径）和max_out_len。
++~~~python
+ from ais_bench.benchmark.models import VLLMCustomAPIChatStream
+ from ais_bench.benchmark.utils.model_postprocessors import extract_non_reasoning_content
+ 
+@@ -102,4 +102,7 @@ models = [
+     ais_bench --models vllm_api_stream_chat --datasets math500_gen_0_shot_cot_chat_prompt
+ ~~~
+ ## 5.sglang推理评测
++
++NPU 上使用 SGLang 后端前，须先按安装指南“SGLang 使用注意事项”导出必需环境变量（HCCL_HOST_SOCKET_PORT_RANGE=60000-60050、HCCL_NPU_SOCKET_PORT_RANGE=61000-61050、RAY_EXPERIMENTAL_NOSET_ASCEND_RT_VISIBLE_DEVICES=1，并按实际设备与所需卡数设置 ASCEND_RT_VISIBLE_DEVICES）。
++
+ 参照 [昇腾 SGLang 最佳实践](../../model_support/examples/ascend_sglang_best_practices.rst)中评测进行
+\ No newline at end of file
+diff --git a/docs/ascend_tutorial/zh/dev_guide/model_dev/parameter_and_metrics.md b/docs/ascend_tutorial/zh/dev_guide/model_dev/parameter_and_metrics.md
+index 8f066168..5cb87bd3 100644
+--- a/docs/ascend_tutorial/zh/dev_guide/model_dev/parameter_and_metrics.md
++++ b/docs/ascend_tutorial/zh/dev_guide/model_dev/parameter_and_metrics.md
+@@ -63,14 +63,13 @@ verl 通过层级化的 YAML 配置文件管理所有参数，涉及到的所有
+ | `actor_rollout_ref.actor.entropy_checkpointing` | `false` | 是否对熵计算使用梯度检查点 |
+ | `actor_rollout_ref.actor.use_remove_padding` | 引用自 `model.use_remove_padding` | 是否移除 padding |
+ | `actor_rollout_ref.actor.calculate_sum_pi_squared` | `false` | 是否计算策略概率平方和 |
+-| `actor_rollout_ref.actor.sum_pi_squared_checkpointing` | `false` | 是否对策略概率平方和计算使用梯度检查点 |
+ | `actor_rollout_ref.actor.use_fused_kernels` | 引用自 `model.use_fused_kernels` | 是否使用融合内核 |
+ 
+ #### 1.1.3 Policy Loss 配置
+ 
+ | 参数名 | 默认值 | 说明 |
+ |--------|--------|------|
+-| `actor_rollout_ref.actor.policy_loss.loss_mode` | `vanilla` | 策略损失模式，可选 vanilla、clip_cov、kl_cov、dppo_tv、dppo_kl、gspo、sapo、geo_mean、cispo、gpg、bypass_mode、reinforce_is 等 |
++| `actor_rollout_ref.actor.policy_loss.loss_mode` | `vanilla` | 策略损失模式，可选 vanilla、clip_cov、kl_cov、dppo_tv、dppo_kl、gspo、sapo、geo_mean、cispo、gpg、bypass_mode、dro 等 |
+ | `actor_rollout_ref.actor.policy_loss.clip_cov_ratio` | `0.0002` | clip_cov 模式的协方差比率 |
+ | `actor_rollout_ref.actor.policy_loss.clip_cov_lb` | `1.0` | clip_cov 模式的协方差下界 |
+ | `actor_rollout_ref.actor.policy_loss.clip_cov_ub` | `5.0` | clip_cov 模式的协方差上界 |
+@@ -145,7 +144,6 @@ verl 通过层级化的 YAML 配置文件管理所有参数，涉及到的所有
+ | `actor_rollout_ref.rollout.multi_turn.max_parallel_calls` | `1` | 最大并行工具调用数 |
+ | `actor_rollout_ref.rollout.multi_turn.max_tool_response_length` | `256` | 工具响应最大长度 |
+ | `actor_rollout_ref.rollout.multi_turn.tool_response_truncate_side` | `middle` | 工具响应截断方向 |
+-| `actor_rollout_ref.rollout.multi_turn.interaction_config_path` | `null` | 交互配置文件路径 |
+ | `actor_rollout_ref.rollout.multi_turn.use_inference_chat_template` | `false` | 是否使用推理聊天模板 |
+ | `actor_rollout_ref.rollout.multi_turn.tokenization_sanity_check_mode` | `strict` | 分词完整性检查模式 |
+ | `actor_rollout_ref.rollout.multi_turn.format` | `hermes` | 多轮对话格式 |
+@@ -317,7 +315,7 @@ verl 通过层级化的 YAML 配置文件管理所有参数，涉及到的所有
+ | `algorithm.norm_adv_by_std_in_grpo` | `true` | GRPO 中是否按标准差归一化优势 |
+ | `algorithm.use_kl_in_reward` | `false` | 是否在奖励中使用 KL 惩罚 |
+ | `algorithm.kl_penalty` | `kl` | KL 惩罚类型 |
+-| `algorithm.kl_ctrl.type` | `fixed` | KL 控制器类型，可选 fixed、kl_adapter 等 |
++| `algorithm.kl_ctrl.type` | `fixed` | KL 控制器类型，可选 fixed、adaptive 等 |
+ | `algorithm.kl_ctrl.kl_coef` | `0.001` | KL 惩罚系数 |
+ | `algorithm.kl_ctrl.horizon` | `10000` | KL 适配器的 horizon |
+ | `algorithm.kl_ctrl.target_kl` | `0.1` | 目标 KL 散度 |
+@@ -365,7 +363,7 @@ verl 通过层级化的 YAML 配置文件管理所有参数，涉及到的所有
+ | `trainer.max_critic_ckpt_to_keep` | `null` | 最多保留的 Critic checkpoint 数 |
+ | `trainer.ray_wait_register_center_timeout` | `300` | Ray 注册中心等待超时（秒） |
+ | `trainer.device` | `cuda` | 训练设备 |
+-| `trainer.use_legacy_worker_impl` | `auto` | 是否使用旧版 worker 实现 |
++| `trainer.use_v1` | `true` | 是否使用 V1（统一引擎）训练器实现（旧版 `use_legacy_worker_impl` 已移除） |
+ | `trainer.rollout_data_dir` | `null` | 保存每轮 rollout 结果的地址配置 |
+ 
+ #### 1.1.20 模型配置
+@@ -504,7 +502,6 @@ verl 通过层级化的 YAML 配置文件管理所有参数，涉及到的所有
+ | `actor_rollout_ref.actor.megatron.use_remove_padding` | `true` | 是否移除 padding |
+ | `actor_rollout_ref.actor.megatron.forward_only` | `false` | 是否仅前向计算 |
+ | `actor_rollout_ref.actor.megatron.dtype` | `bfloat16` | 模型数据类型 |
+-| `actor_rollout_ref.actor.megatron.load_weight` | `true` | 是否加载权重 |
+ 
+ #### 1.3.3 Megatron Transformer 覆盖配置
+ 
+diff --git a/docs/ascend_tutorial/zh/dev_guide/model_dev/transfer_to_npu_guide.md b/docs/ascend_tutorial/zh/dev_guide/model_dev/transfer_to_npu_guide.md
+index 4b6e2fa0..3c9b6476 100644
+--- a/docs/ascend_tutorial/zh/dev_guide/model_dev/transfer_to_npu_guide.md
++++ b/docs/ascend_tutorial/zh/dev_guide/model_dev/transfer_to_npu_guide.md
+@@ -80,7 +80,7 @@ Megatron-Bridge已在社区原生适配大量主流模型结构，支持列表
+ 
+ ### 3.3 训推差异点排查与对齐实践
+ 
+-完成数据采集后，优先读取 `construction.json` 文件进行模块级数据比对。先保证 `layer.0.input_layernorm` 输入数据完全一致，再逐模块逐层校验，定位训练与推理输出首次出现不一致的位置。
++完成数据采集后，优先读取 `construct.json` 文件进行模块级数据比对。先保证 `layer.0.input_layernorm` 输入数据完全一致，再逐模块逐层校验，定位训练与推理输出首次出现不一致的位置。
+ 
+ 而对于大尺寸模型，微小数值差异会随着逐层累积、放大，导致训练（training）和推理（rollout）的结果差异明显，甚至会出现同一个token训推输出概率分别为0和1的现象，因此需尽可能将每一处差异点对齐至完全相等。
+ 
+@@ -130,18 +130,18 @@ self.k_norm=LayerNorm(self.head_dim,eps=1e-6 -> 1e-5)
+ 
+ * **缺失（推理侧遗漏）**：推理侧缺失了 `weights` 的缩放逻辑。参考 Megatron 训练侧、slime 及 transformers 的标准实现，均包含该缩放，故在推理侧补齐以对齐前向：
+ 
+-```
++```diff
+ weights, _ = self.weights_proj(x)
+ +weights = weights * (self.n_head**-0.5) * (self.head_dim**-0.5)
+ ```
+ 
+-* **冗余（训练侧多余错误实现）**：训练侧 Megatron 实现中多出了 `rotate_activation`（哈达玛变换）。经查阅大量资料确认，该操作专用于量化场景，在 BF16 格式中属于错误实现。参考 [Transformer PR#45017](https://github.com/huggingface/transformers/pull/45017)，将训练侧该冗余逻辑移除。
++* **冗余（训练侧多余错误实现）**：训练侧 Megatron 实现中多出了 `rotate_activation`（哈达玛变换）。经查阅大量资料确认，该操作专用于量化场景，在 BF16 格式中属于错误实现。参考 [Transformer PR#45017](https://github.com/huggingface/transformers/pull/45017) 中“rotate_activation 仅服务于 FP8 量化场景”的结论，将训练侧该冗余逻辑移除。
+ 
+ ```
+ class DSAIndexer(MegatronModule):
+     def forward_with_scores(
+--		q = rotate_activation(q)
+--		k = rotate_activation(k)
++-        q = rotate_activation(q)
++-        k = rotate_activation(k)
+ ```
+ 
+ ### 3.4 MoE 大模型通用路由稳定方案
+@@ -236,7 +236,7 @@ rm aime2025.zip
+ 
+ ### 5.3 修改AISBench配置代码使能vllm/sglang推理评测
+ 
+-打开 benchmark/ais_bench/benchmark/configs/models/vllm_api/vllm_api_stream_chat.py 文件，这是推理评测配置文件，输出长度`max_out_len`建议与训练的`max_response_len`保持一致。
++打开 benchmark/ais_bench/benchmark/configs/models/vllm_api/vllm_api_stream_chat.py 文件，这是推理评测配置文件，输出长度`max_out_len`建议与训练的`max_response_length`保持一致。
+ 
+ ```shell
+ from ais_bench.benchmark.models import VLLMCustomAPIChat
+@@ -271,7 +271,7 @@ models = [
+ 
+ ### 5.4 多机拉起推理服务端
+ 
+-参考[vllm_ascend GLM5指南](https://github.com/vllm-project/vllm-ascend/blob/main/docs/source/tutorials/models/GLM5.md)拉起双机A3推理服务，`host_port`与上一小节配置保持一致，`max_model_len`设置为训练时的`max_prompt_length`与`max_response`之和。
++参考[vllm_ascend GLM5指南](https://github.com/vllm-project/vllm-ascend/blob/main/docs/source/tutorials/models/GLM5.md)拉起双机A3推理服务，`host_port`与上一小节配置保持一致，`max_model_len`设置为训练时的`max_prompt_length`与`max_response_length`之和。
+ 
+ ### 5.5 启动vllm评测任务
+ 
+diff --git a/docs/ascend_tutorial/zh/dev_guide/performance/ascend_performance_analysis_guide.md b/docs/ascend_tutorial/zh/dev_guide/performance/ascend_performance_analysis_guide.md
+index 25b72668..e4614200 100644
+--- a/docs/ascend_tutorial/zh/dev_guide/performance/ascend_performance_analysis_guide.md
++++ b/docs/ascend_tutorial/zh/dev_guide/performance/ascend_performance_analysis_guide.md
+@@ -93,7 +93,7 @@ host bound是指CPU任务量总和大于NPU，导致NPU执行出现空泡的现
+ 
+ ![host_bound_2](https://github.com/chengminhua/verl_data/raw/main/MindStudio_Insight_use/host_bound_2.png)
+ 
+-此时有的算子在负重前行，有的算子拖了后腿，后者多于了前者。我们优先**找出来host耗时大于device的top算子，这些算子是拖后腿的**，可以交予算子团队重点分析。
++此时有的算子在负重前行，有的算子拖了后腿，后者多于前者。我们优先**找出来host耗时大于device的top算子，这些算子是拖后腿的**，可以交予算子团队重点分析。
+ 
+ ### 2.组网合理性分析
+ 
+@@ -113,7 +113,7 @@ host bound是指CPU任务量总和大于NPU，导致NPU执行出现空泡的现
+ 
+ ### 3.算子性能初诊
+ 
+-需要利用 `"./ASCEND_PROFILER_OUTPUT/operator_details.csv"`来做分析，从而判断算子是否有性能问题。
++需要利用 `./ASCEND_PROFILER_OUTPUT/operator_details.csv`来做分析，从而判断算子是否有性能问题。
+ 
+ Profiling工具会统计这些流水线在不同核上的平均繁忙时间（xxx_time），与最慢核的完整kernel耗时（task_duration）做除法，得到流水线利用率（xxx_ratio）。这些流水线之间虽然互有依赖，且搬运类流水线会互抢带宽，但算子只要设计得当，是可以做到互相掩盖的。因此我们可以初步认为，**当算子的执行耗时大到一定程度上，算子应当在某一条流水线上形成bound**，即利用率要高到一定程度。经验上，在单算子耗时达到50μs时，就可以认为算子应当在bound流水线上，达成80%+的占用率了。
+ 
+@@ -145,7 +145,7 @@ mte2是一个自身效率严重受shape影响的流水线。要想让mte2保证
+ 
+ 对于LLM中的vector算子，它的一种常见分核策略有可能是分在最高维，也就是batch维，常见于对低维（也叫尾轴）有规约操作的norm类、动态量化类等算子；另一种是整体拍平，允许算子切分得非常细的算子，如elementwise算子。对于第一种，我们就可以在模型侧关注它的负载均衡问题。例如我们打48batch，而硬件却是个40个vector核，那这40个核会循环2次，第二次有多数的核会无事可做，这个batch数就可以认为是不友好的。如果将batch打到64或80，性能可以预见会是无损的。同样的情况下，如果是48核的卡，那我们可以认为这就是个非常友好的batch数。
+ 
+-对于cube类算子，它常见的分核策略是以base快去切分M和N（K轴是累加轴，对它分核会引入确定性问题）。最常见的分块是baseM=128，baseN=256。在decode阶段，我们的耗时基本可以看做都是在搬权重，这是因为激活的M极小，M方向大概率只分了一块，那么右矩阵就只需要搬一次。所以我们在M≤128的范围内可以尽情提高M，对性能都基本是无损的，如果M大于128，可以认为(128, 256]是下一个性能分档。
++对于cube类算子，它常见的分核策略是以base块去切分M和N（K轴是累加轴，对它分核会引入确定性问题）。最常见的分块是baseM=128，baseN=256。在decode阶段，我们的耗时基本可以看做都是在搬权重，这是因为激活的M极小，M方向大概率只分了一块，那么右矩阵就只需要搬一次。所以我们在M≤128的范围内可以尽情提高M，对性能都基本是无损的，如果M大于128，可以认为(128, 256]是下一个性能分档。
+ 除了M外，N轴切分的任务也影响算子亲和性，以deepseekR1中的MLA预处理为例，它会使用同一个激活（shape为[batch_size, 7168]）与两个权重做矩阵乘(shape为[7168, 1536]和[7168, 576])。在batch_size打不大的情况下，即使baseN缩短为128，N轴都不能用满核数，所以此时这两个矩阵乘各自的耗时，会约等于将他们权重N轴拼起来乘(shape为[7168, 2112])的矩阵乘的耗时。如果仅考虑模型竞争力，我们更希望对这两个权重做合并，否则两个小的矩阵乘带宽利用率都会非常差。
+ 
+ 对于Attention算子，它常见的分核策略是q_seqlen、batch_size和kv_headnum。增量阶段q_seqlen会以MTP和GQA倍数做合并，但是通常也不会大过128，划分不出第二个任务，那么并行度基本就是batch_size * kv_headnum。
+diff --git a/docs/ascend_tutorial/zh/dev_guide/performance/ascend_profiling.rst b/docs/ascend_tutorial/zh/dev_guide/performance/ascend_profiling.rst
+index ea8ec540..84c381ef 100644
+--- a/docs/ascend_tutorial/zh/dev_guide/performance/ascend_profiling.rst
++++ b/docs/ascend_tutorial/zh/dev_guide/performance/ascend_profiling.rst
+@@ -61,6 +61,13 @@ Last updated: 07/13/2026.
+ 
+ -  analysis: 是否启用自动数据解析。
+ -  discrete: 是否使用离散模式。
++-  schedule: 配置采集窗口；仅在 ``active > 0`` 时生效，verl 每完成一个 Actor/Critic update mini-batch 调用一次 ``profiler.step()`` 推进 schedule。
++
++   -  skip_first: 在第一个周期开始前忽略的初始 mini-batch 数。
++   -  wait: 每个周期开始时空闲（不采集）的 mini-batch 数。
++   -  warmup: 每个周期中先追踪但丢弃的 mini-batch 数，用于让 profiler 稳定。
++   -  active: 每个周期实际记录的 mini-batch 数。设为 ``0``（默认）则关闭调度，不支持负值。
++   -  repeat: 记录的周期数。``0``（默认）表示持续重复直到 profiling 结束。
+ -  profile_token_start：仅在 rollout role 下生效，用于指定 rollout 解码阶段的采集起始 response token；参数合法时生效（从 0 开始，满足 ``profile_token_end > profile_token_start``，且区间在 response 长度内）。
+ -  profile_token_end：仅在 rollout role 下生效，用于指定 rollout 解码阶段的采集结束 response token（右边界不包含）；参数合法时生效（从 0 开始，满足 ``profile_token_end > profile_token_start``，且区间在 response 长度内）。
+ 
+@@ -122,7 +129,7 @@ Last updated: 07/13/2026.
+                      # 可选：轻量化采集推理数据，按 response token 区间采集；不设置 start/stop 时采集整个 rollout 阶段
+                      profile_token_start: 30
+                      profile_token_end: 60
+-         # ref follow actor settings
++         # ref 不继承 actor 的 profiler 配置；如需采集 ref 的 compute_log_prob，请单独设置 actor_rollout_ref.ref.profiler.enable=True 与 actor_rollout_ref.ref.profiler.ranks=[0]
+ 
+ 快速开始
+ --------
+@@ -174,7 +181,7 @@ Last updated: 07/13/2026.
+       # 可选：轻量化采集推理数据，按 response token 区间采集；不设置 start/stop 时采集整个 rollout 阶段
+       actor_rollout_ref.rollout.profiler.tool_config.npu.profile_token_start=30
+       actor_rollout_ref.rollout.profiler.tool_config.npu.profile_token_end=60
+-      # ref follow actor settings
++      # ref 不继承 actor 的 profiler 配置；如需采集 ref 的 compute_log_prob，请单独设置 actor_rollout_ref.ref.profiler.enable=True 与 actor_rollout_ref.ref.profiler.ranks=[0]
+ 
+ **Agent Loop 模式说明**：
+ 
+@@ -300,6 +307,7 @@ Last updated: 07/13/2026.
+   +                   on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(os.environ.get('ROLLOUT_PROFILE_PATH'), analyse_flag=True)  # 采集数据保存路径，是否在线解析
+   +               )
+   +               self.profiler_npu.start()
++# 采集结束（schedule 完成或训练/推理收尾）时调用：self.profiler_npu.stop()
+   
+               # ... existing code ...
+   
+@@ -310,7 +318,7 @@ Last updated: 07/13/2026.
+               
+   +           import os
+   +           if os.environ.get('ROLLOUT_PROFILE', "false") == "true":
+-  +               self.profiler_npu.step()  # 驱动 schedule，对部分decode step进行采集
++  +               self.profiler_npu.step()  # 驱动 schedule，对部分decode step进行采集；应放在 execute_model 所有提前 return 之前或统一出口/finally 中
+               
+               # ... existing code ...
+ 
+@@ -350,13 +358,14 @@ Last updated: 07/13/2026.
+   +                   on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(os.environ.get('ROLLOUT_PROFILE_PATH'), analyse_flag=True)  # 采集数据保存路径，是否在线解析
+   +               )
+   +               self.profiler_npu.start()
++# 采集结束（schedule 完成或训练/推理收尾）时调用：self.profiler_npu.stop()
+   
+           def forward(self, forward_batch, **kwargs):
+               # ... existing code ...
+ 
+   +           import os
+   +           if os.environ.get('ROLLOUT_PROFILE', "false") == "true":
+-  +               self.profiler_npu.step()  # 驱动 schedule，对部分decode step进行采集
++  +               self.profiler_npu.step()  # 驱动 schedule，对部分decode step进行采集；应放在 execute_model 所有提前 return 之前或统一出口/finally 中
+ 
+               return output
+ 
+diff --git a/docs/ascend_tutorial/zh/dev_guide/performance/perf_tuning_on_ascend.rst b/docs/ascend_tutorial/zh/dev_guide/performance/perf_tuning_on_ascend.rst
+index 3ea6a732..a6f11898 100644
+--- a/docs/ascend_tutorial/zh/dev_guide/performance/perf_tuning_on_ascend.rst
++++ b/docs/ascend_tutorial/zh/dev_guide/performance/perf_tuning_on_ascend.rst
+@@ -108,7 +108,7 @@ torch_npu 接口：  ``torch_npu.npu_swiglu(Tensor self, int dim=-1) -> (Tensor)
+ FSDP后端融合算子使用方法
+ **********************************
+ 
+-在 ``verl/models/transformers/npu_patch.py`` 目录中，已经把可用的融合算子通过 patch 的形式进行替换，无需进行其他操作即可默认进行使用
++在 ``verl/models/transformers/npu_patch.py`` 文件中，已经把可用的融合算子通过 patch 的形式进行替换，默认即可使用；但 ``actor_rollout_ref.model.use_liger=True`` 或 FSDP 使用 ``fsdp_turbo`` 策略时不会应用这些 NPU patch，需关闭这两项才会生效。
+ 
+ Megatron后端融合算子使用方法
+ **********************************
+@@ -216,14 +216,13 @@ FSDP
+    :header: "FSDP", "说明"
+    :widths: 30, 60
+ 
+-   "/","仅切分优化器(Zero-1)"
+    SHARD_GRAD_OP,切分梯度和优化器(Zero-2)
+    "HYBRID_SHARD","切分权重、梯度和优化器(Zero-3)"
+    "2D device_mesh+HYBRID_SHARD","又称HSDP（FSDP+DDP）例如device_mesh=[2,8], 每8个rank为一个FSDP组，组内进行FSDP切分，共有两个组，两个组间进行DDP，通过allreduce同步梯度。"
+    "2D device_mesh+HYBRID_SHARD_ZERO2","HSDP的Zero2版本"
+    NO_SHARD,DDP
+ 
+-FSDP 不支持 Zero-1， VeRL中会根据卡数和 ``actor_rollout_ref.actor.fsdp_config.fsdp_size``  来决定 device mesh 的取值，默认使用 Zero-3 进行切分；如果模型较小（建议小于 7B 时），可以通过控制参数 ``actor_rollout_ref.actor.fsdp_config.reshard_after_forward`` 为 ``True`` 在 FSDP/FSDP2 上使用 Zero-2 来优化性能.
++FSDP 不支持 Zero-1， VeRL中会根据卡数和 ``actor_rollout_ref.actor.fsdp_config.fsdp_size``  来决定 device mesh 的取值，默认使用 Zero-3 进行切分；如果模型较小（建议小于 7B 时），可以通过控制参数 ``actor_rollout_ref.actor.fsdp_config.reshard_after_forward`` 为 ``False`` 在 FSDP/FSDP2 上使用 Zero-2 来优化性能.
+ 
+ Megatron
+ **********************************
+@@ -242,8 +241,8 @@ TP、PP、EP、ETP和 Megatron 使用方式一样，CP 和 SP 在 NPU 上开启
+ - CP: ``Context Parallel`` 是一种在多个 GPU/NPU 上并行处理神经网络激活值的方法，它通过在序列维度上对输入张量进行划分来实现。在 NPU 上通过 MindSpeed 来调用 CP （两个参数必须同时添加）:
+   ::
+ 
+-      actor_rollout_ref.actor.megatron.context_parallel_size
+-      actor_rollout_ref.actor.megatron.override_transformer_config.context_parallel_size
++      actor_rollout_ref.actor.megatron.context_parallel_size=2
++      +actor_rollout_ref.actor.megatron.override_transformer_config.context_parallel_size=2
+ 
+ Megatron-distributed optimizer
+ **********************************
+@@ -252,4 +251,4 @@ Megatron-distributed optimizer
+ 
+ ::
+ 
+-    +actor_rollout_ref.actor.megatron.override_transformer_config.use_distributed_optimizer=True
++    +actor_rollout_ref.actor.megatron.use_distributed_optimizer=True
+diff --git a/docs/ascend_tutorial/zh/dev_guide/precision_analysis/precision_alignment.md b/docs/ascend_tutorial/zh/dev_guide/precision_analysis/precision_alignment.md
+index c2565da5..3d57e10d 100644
+--- a/docs/ascend_tutorial/zh/dev_guide/precision_analysis/precision_alignment.md
++++ b/docs/ascend_tutorial/zh/dev_guide/precision_analysis/precision_alignment.md
+@@ -68,6 +68,7 @@ seed_all(mode=True)
+ 
+   -  export CLOSE_MATMUL_K_SHIFT=1
+   -  export ATB_MATMUL_SHUFFLE_K_ENABLE=0
++  -  export HCCL_OP_EXPANSION_MODE="AIV"
+   -  export LCCL_DETERMINISTIC=1
+   -  export ATB_LLM_LCOC_ENABLE=0
+   -  export VLLM_ENABLE_V1_MULTIPROCESSING=0
+diff --git a/docs/ascend_tutorial/zh/faq/faq.rst b/docs/ascend_tutorial/zh/faq/faq.rst
+index 6c0fa7bd..ec73c355 100644
+--- a/docs/ascend_tutorial/zh/faq/faq.rst
++++ b/docs/ascend_tutorial/zh/faq/faq.rst
+@@ -106,9 +106,9 @@ Last updated: 05/13/2026.
+ 
+    张量形状: torch.Size([151936, 4096])
+    数据类型: torch.float32 (4 字节)
+-   权重大小 = 151936 × 4096 × 4 = 2,483,027,968 字节 ≈ 2369 MB
++   权重大小 = 151936 × 4096 × 4 = 2,489,319,424 字节 ≈ 2374 MB
+ 
+-   默认 bucket 大小 = 2048 MB < 2369 MB → 触发断言失败
++   默认 bucket 大小 = 2048 MB < 2374 MB → 触发断言失败
+ 
+ **解决方案**：在启动训练时增加 ``update_weights_bucket_megabytes`` 参数，使 bucket 容量大于最大权重张量的内存占用：
+ 
+@@ -120,7 +120,7 @@ Last updated: 05/13/2026.
+ 
+ 1. **计算模型中最大权重张量的内存占用**：遍历模型所有参数，找出 ``nbytes`` 最大的那个，将其转换为 MB（除以 1024²）。
+ 
+-2. **向上取整到 2 的幂次**：为便于内存分配和管理，建议将计算结果向上取整到最近的 2 的幂次（如 2048、4096、8192 等）。例如最大权重为 2369 MB，则取 4096 MB。
++2. **向上取整到 2 的幂次**：为便于内存分配和管理，建议将计算结果向上取整到最近的 2 的幂次（如 2048、4096、8192 等）。例如最大权重为 2374 MB，则取 4096 MB。
+ 
+ 3. **预留适当余量**：考虑到内存对齐和运行时开销，建议 bucket 大小至少为最大权重大小的 1.2~1.5 倍，再向上取整到 2 的幂次。
+ 
+diff --git a/docs/ascend_tutorial/zh/feature_support/ascend_backend_features.md b/docs/ascend_tutorial/zh/feature_support/ascend_backend_features.md
+index 70172106..9aeabe06 100644
+--- a/docs/ascend_tutorial/zh/feature_support/ascend_backend_features.md
++++ b/docs/ascend_tutorial/zh/feature_support/ascend_backend_features.md
+@@ -1,5 +1,4 @@
+ # 昇腾后端特性指南
+-==================================================================================
+ 
+ Last updated: 03/03/2026.
+ 
+@@ -20,7 +19,7 @@ Last updated: 03/03/2026.
+ | vllm参数| verl对应通用参数 | 简介 |
+ | --- | --- | --- |
+ | `model_path` | `actor_rollout_ref.model.path` |模型权重文件的路径|
+-| `gpu_memory_utilization` | `actor_rollout_ref.rollout.gpu_memory_utilization` |用于控制每个阶段可使用的 GPU 内存量。它被指定为一个介于 0.0 和 1.0 之间的分数，其中：- 0.8 表示 GPU 总内存的 80%- 1.0 表示 GPU 总内存的 100%（不推荐，没有预留缓冲）|
++| `gpu_memory_utilization` | `actor_rollout_ref.rollout.gpu_memory_utilization` |用于控制每个阶段可使用的 GPU 内存量。它被指定为一个介于 0.0 和 1.0 之间的分数，其中：<br>- 0.8 表示 GPU 总内存的 80%<br>- 1.0 表示 GPU 总内存的 100%（不推荐，没有预留缓冲）|
+ | `enforce_eager`| `actor_rollout_ref.rollout.enforce_eager` |禁用图模式，verl默认为False|
+ | `enable_chunked_prefill`| `actor_rollout_ref.rollout.enable_chunked_prefill` | 分块预填充允许将大预填充分块成更小的块，并将它们与解码请求一起批处理。|
+ | `free_cache_engine`| `actor_rollout_ref.rollout.free_cache_engine`  |在部署生成阶段之后卸载 KVCache，默认值为 True。|
+@@ -111,6 +110,7 @@ verl中通过rollout config管理推理后端参数使能，包含通用参数
+ | `actor_rollout_ref.actor.fsdp_config.fsdp_size` | 每个FSDP分片组中的NPU数量；默认值-1表示自动。|
+ | `actor_rollout_ref.actor.ulysses_sequence_parallel_size`|Ulysses序列并行大小|
+ | `actor_rollout_ref.actor.entropy_from_logits_with_chunking`|通过分块计算熵以减少显存峰值，默认值为False|
++| `actor_rollout_ref.actor.entropy_from_logits_chunk_size`|熵计算分块大小，默认值为2048|
+ | `actor_rollout_ref.actor.fsdp_config.entropy_checkpointing`|在训练时对熵计算启用重计算,降低显存峰值，默认值为False|
+ | `actor_rollout_ref.actor.fsdp_config.forward_only` |是否只进行前向计算，默认值为False|
+ 
+@@ -124,9 +124,9 @@ MindSpeed 底层的替换原理采用了 Monkey Patch 技术
+ 
+ * MindSpeed Monkey Patch框架
+ 
+-在verl里面通过`from mindspeed.megatron_adaptor import repatch  `触发patch，调用栈如下：
++在verl里面通过`from mindspeed.megatron_adaptor import repatch`触发patch，调用栈如下：
+ 
+-~~~
++~~~text
+ from mindspeed.megatron_adaptor import repatch
+ ├── 执行 megatron_adaptor.py 模块导入
+ ├── 导入 features_manager 模块
+@@ -395,5 +395,5 @@ actor_rollout_ref.rollout.checkpoint_engine.backend=nccl
+ 
+ # 方式二：mooncake 后端（NPU 上需指定 device 为 npu）
+ actor_rollout_ref.rollout.checkpoint_engine.backend=mooncake
+-+actor_rollout_ref.rollout.checkpoint_engine.engine_kwargs.mooncake.device=npu
++actor_rollout_ref.rollout.checkpoint_engine.engine_kwargs.mooncake.device=npu
+ ```
+diff --git a/docs/ascend_tutorial/zh/feature_support/npu_advance_features.md b/docs/ascend_tutorial/zh/feature_support/npu_advance_features.md
+index 5e1ad48d..58caa0d9 100644
+--- a/docs/ascend_tutorial/zh/feature_support/npu_advance_features.md
++++ b/docs/ascend_tutorial/zh/feature_support/npu_advance_features.md
+@@ -117,7 +117,7 @@ repatch
+ | verl 参数 | 功能说明 |
+ |:---|:---|
+ | `actor_rollout_ref.actor.megatron.override_transformer_config.deallocate_pipeline_outputs` | **流水线输出释放** — 张量发送到下一 PP stage 后释放输出数据，降低显存峰值，默认 `False` |
+-| `actor_rollout_ref.actor.megatron.override_transformer_config.recompute_granularity` | **重计算粒度控制** — 可选 `full` / `selective` / `none`。`full` 重算整个 Transformer 层，`selective` 仅重算注意力核心部分，默认 `none` |
++| `actor_rollout_ref.actor.megatron.override_transformer_config.recompute_granularity` | **重计算粒度控制** — 可选 `full` / `selective`，不设置（`None`）表示不重算。`full` 重算整个 Transformer 层，`selective` 仅重算注意力核心部分，默认 `None` |
+ | `actor_rollout_ref.actor.megatron.override_transformer_config.recompute_method` | **重计算方法** — 需 `recompute_granularity=full`，可选 `uniform` / `block`，默认 `None` |
+ | `actor_rollout_ref.actor.megatron.override_transformer_config.recompute_num_layers` | **重计算层数** — 需 `recompute_granularity=full`，值越大显存占用越小、计算成本越高，需能被当前进程模型层数整除 |
+ 
+@@ -136,8 +136,8 @@ repatch
+ |:---|:---|
+ | `actor_rollout_ref.actor.megatron.override_transformer_config.account_for_loss_in_pipeline_split` | **Loss 层流水线划分** — 将 loss 层视为标准 Transformer 层参与划分，默认 `False` |
+ | `actor_rollout_ref.actor.megatron.override_transformer_config.account_for_embedding_in_pipeline_split` | **Embedding 层流水线划分** — 将输入 embedding 层视为标准 Transformer 层参与划分，默认 `False` |
+-| `actor_rollout_ref.actor.megatron.override_transformer_config.num_layers_in_first_pipeline_stage` | **首 stage 层数** — 指定第一个 pipeline stage 的层数，默认 `none` |
+-| `actor_rollout_ref.actor.megatron.override_transformer_config.num_layers_in_last_pipeline_stage` | **末 stage 层数** — 指定最后一个 pipeline stage 的层数，默认 `none` |
++| `actor_rollout_ref.actor.megatron.override_transformer_config.num_layers_in_first_pipeline_stage` | **首 stage 层数** — 指定第一个 pipeline stage 的层数，默认 `None` |
++| `actor_rollout_ref.actor.megatron.override_transformer_config.num_layers_in_last_pipeline_stage` | **末 stage 层数** — 指定最后一个 pipeline stage 的层数，默认 `None` |
+ 
+ ##### 权重管理
+ 
+@@ -163,7 +163,7 @@ repatch
+ | 熵计算分块大小 (`entropy_from_logits_chunk_size`) | 训练 (FSDP) | 熵计算分块大小 |
+ | 熵计算重计算 (`entropy_checkpointing`) | 训练 (FSDP) | 对熵计算启用重计算 |
+ | 流水线输出释放 (`deallocate_pipeline_outputs`) | 训练 (Megatron) | PP 场景下释放已传递的张量 |
+-| 激活重计算 (`recompute_granularity`) | 训练 (Megatron) | 支持 full/selective/none 三级粒度控制 |
++| 激活重计算 (`recompute_granularity`) | 训练 (Megatron) | 支持 full/selective 两档粒度，留空（`None`）表示不重算 |
+ 
+ ### 3.2 计算加速
+ 
+@@ -185,7 +185,7 @@ repatch
+ | 张量并行 (TP) | ✅ | ✅ | — | ✅ | 层内张量切分 |
+ | 流水线并行 (PP) | — | — | — | ✅ | 层间流水线切分 |
+ | 专家并行 (EP) | ✅ | ✅ | — | ✅ | MoE 专家维度并行 |
+-| 序列并行 (SP/Ulysses) | ✅ | ✅ | ✅ | ✅ | 序列维度切分，支持长序列 |
++| 序列并行 (SP/Ulysses) | — | — | ✅ | ✅ | 序列维度切分，支持长序列（推理侧无 Ulysses 配置项，序列切分由 TP 内部完成） |
+ | 上下文并行 (CP) | ✅ | — | — | ✅ | 上下文并行处理 |
+ 
+ ---
+@@ -211,7 +211,7 @@ repatch
+ ## 5. 限制与注意事项
+ 
+ 1. **FSDP1 vs FSDP2 差异**
+-   - `forward_prefetch` 和 `use_orig_params` 仅适用于 FSDP1
++   - `use_orig_params` 仅适用于 FSDP1；`forward_prefetch` 在 FSDP1 与 FSDP2 下均生效（FSDP2 经 `set_modules_to_forward_prefetch` 实现，需 PyTorch ≥ 2.5）
+    - FSDP2 为默认推荐版本，API 支持度参照 [昇腾 PyTorch 版本说明](https://www.hiascend.com/document/detail/zh/Pytorch/730/apiref/PyTorchNativeapi/docs/zh/native_apis/pytorch_2-7-1/torch-distributed-fsdp.md)
+ 
+ 2. **重计算参数依赖关系**
+diff --git a/docs/ascend_tutorial/zh/get_start/dockerfile_build_guidance.rst b/docs/ascend_tutorial/zh/get_start/dockerfile_build_guidance.rst
+index d5f2dbad..0f9d0e6e 100644
+--- a/docs/ascend_tutorial/zh/get_start/dockerfile_build_guidance.rst
++++ b/docs/ascend_tutorial/zh/get_start/dockerfile_build_guidance.rst
+@@ -154,6 +154,7 @@ A3              8.5.2                vLLM          Qwen3.5        `Dockerfile.as
+ .. code:: bash
+ 
+    # 从仓库根目录构建 latest vLLM 镜像
++   # {verl-root-path} 为 verl 源码仓库在本机的绝对路径；如尚未获取，可先执行 git clone https://github.com/verl-project/verl.git
+    cd {verl-root-path}
+    docker build -f docker/ascend/Dockerfile.ascend_9.2.1_a2 -t verl-ascend:9.2.1-a2 .
+ 
+diff --git a/docs/ascend_tutorial/zh/get_start/install_guidance.rst b/docs/ascend_tutorial/zh/get_start/install_guidance.rst
+index 25abfc7a..4f8e3f8a 100644
+--- a/docs/ascend_tutorial/zh/get_start/install_guidance.rst
++++ b/docs/ascend_tutorial/zh/get_start/install_guidance.rst
+@@ -130,12 +130,13 @@ CANN是NPU上的异构计算架构，以下为arm平台A3安装指令，请参
+    # 安装依赖&配源
+    sudo yum makecache
+    sudo yum install -y gcc python3 python3-pip kernel-headers-$(uname -r) kernel-devel-$(uname -r) 
+-   sudo curl https://repo.oepkgs.net/ascend/cann/ascend.repo -o /etc/yum.repos.d/ascend.repo && yum makecache
++   sudo curl https://repo.oepkgs.net/ascend/cann/ascend.repo -o /etc/yum.repos.d/ascend.repo && sudo yum makecache
+    # 安装NPU驱动
+    sudo yum install -y Atlas-A3-hdk-npu-driver-26.2.rc1
+    # 安装Toolkit，可指定--install-path 自定义路径
+    sudo yum install -y Ascend-cann-toolkit-9.2.1
+    sudo yum install -y Ascend-cann-A3-ops-9.2.1
++sudo yum install -y Ascend-cann-nnal-9.2.1
+    # 安装后验证
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python3 -c "import acl;print(acl.get_soc_name())"
+@@ -218,7 +219,7 @@ CANN是NPU上的异构计算架构，以下为arm平台A3安装指令，请参
+    # 安装依赖&配源
+    sudo yum makecache
+    sudo yum install -y gcc python3 python3-pip kernel-headers-$(uname -r) kernel-devel-$(uname -r) 
+-   sudo curl https://repo.oepkgs.net/ascend/cann/ascend.repo -o /etc/yum.repos.d/ascend.repo && yum makecache
++   sudo curl https://repo.oepkgs.net/ascend/cann/ascend.repo -o /etc/yum.repos.d/ascend.repo && sudo yum makecache
+    # 安装NPU驱动
+    sudo yum install -y Atlas-A3-hdk-npu-driver-25.5.0
+    # 安装Toolkit，可指定--install-path 自定义路径
+@@ -250,7 +251,7 @@ CANN是NPU上的异构计算架构，以下为arm平台A3安装指令，请参
+ SGLang 使用注意事项
+ ^^^^^^^^^^^^^^^^^^^
+ 
+-当前 NPU 上支持 SGLang 后端必须添加以下环境变量：
++在 NPU 上使用 SGLang 后端时，必须添加以下环境变量：
+ 
+ .. code:: bash
+ 
+diff --git a/docs/ascend_tutorial/zh/get_start/install_guidance_950.rst b/docs/ascend_tutorial/zh/get_start/install_guidance_950.rst
+index 21fc61f8..8ed71a6d 100644
+--- a/docs/ascend_tutorial/zh/get_start/install_guidance_950.rst
++++ b/docs/ascend_tutorial/zh/get_start/install_guidance_950.rst
+@@ -69,7 +69,8 @@ MindSpeed     ``26.2.0_core_r0.18.0``                           Megatron-LM 在
+    对齐；xgrammar 使用 `vLLM 0.30.0 的依赖范围 <https://github.com/vllm-project/vllm/blob/v0.30.0/requirements/common.txt>`_。
+    使用 triton-ascend 提供的 Triton 实现，无需另行安装 triton 软件包。
+    当前两个上游存在 FastAPI 约束冲突：vLLM 要求 ``>=0.133.0,<0.137.0``，vLLM-Ascend 要求 ``<0.124.0``，
+-   没有同时满足两者的版本。需先解决该冲突，再使用 ``pip check`` 检查最终环境并验证运行兼容性。
++   没有同时满足两者的版本。需先解决该冲突，再使用 ``# 若 pip check 仅报告 vllm-ascend 的 fastapi<0.124.0 不满足，属于上方 note 已声明的上游 FastAPI 约束冲突；除此之外不应再有其他依赖冲突。
++pip check`` 检查最终环境并验证运行兼容性。
+ 
+ 
+ Megatron 训练后端还需安装以下 Bridge 组件：
+@@ -91,7 +92,7 @@ Megatron 训练后端还需安装以下 Bridge 组件：
+ 安装前准备（ CANN）
+ ^^^^^^^^^^^^^^^^^^^^^^^^
+ 
+-CANN是NPU上的异构计算架构，以下为arm平台950PR&DT系列产品安装指令，请参照如下指令下载HDK和CANN并安装，
++CANN是NPU上的异构计算架构，以下为arm平台950PR&DT系列产品安装指令，请参照如下指令下载CANN并安装；950系列HDK/驱动由宿主机镜像提供，请按宿主机实际版本核对，安装后确认驱动版本与 CANN 匹配，
+ 或者根据系统硬件型号从 `CANN社区 <https://www.hiascend.com/cann/download>`_ 下载安装
+ 
+ .. code:: bash
+@@ -112,6 +113,8 @@ CANN是NPU上的异构计算架构，以下为arm平台950PR&DT系列产品安
+ 源码安装
+ ^^^^^^^^^^^^^^^^^^^^^^^^
+ 
++本文件各后端采用下列手工安装步骤，安装脚本入口与 install_guidance.rst 一致。
++
+ vLLM推理后端支持
+ ^^^^^^^^^^^^^^^^^^^^^^^^
+ 
+@@ -176,6 +179,7 @@ verl 依赖安装
+ .. code:: bash
+ 
+     git clone https://github.com/verl-project/verl.git
++    # 请检出与本文档版本表匹配的 verl tag 或 release 分支，例如 git checkout <verl-tag>
+     # 向 Megatron-Bridge 源码应用兼容性补丁
+     git -C Megatron-Bridge apply --unidiff-zero \
+         "$(pwd)/verl/docker/ascend/patches/megatron_bridge_qwen3_asr.patch"
+diff --git a/docs/ascend_tutorial/zh/get_start/quick_start.rst b/docs/ascend_tutorial/zh/get_start/quick_start.rst
+index 6115ebb5..51792adb 100644
+--- a/docs/ascend_tutorial/zh/get_start/quick_start.rst
++++ b/docs/ascend_tutorial/zh/get_start/quick_start.rst
+@@ -155,4 +155,4 @@ vLLM 后端脚本转换为 SGLang
+    ++actor_rollout_ref.rollout.engine_kwargs.sglang.moe_a2a_backend="deepep" \
+ 
+    # MoE 模型多 DP 时必须设置为 True（默认为False）
+-   +actor_rollout_ref.rollout.engine_kwargs.sglang.enable_dp_attention=False \   
+\ No newline at end of file
++   +actor_rollout_ref.rollout.engine_kwargs.sglang.enable_dp_attention=True \   
+\ No newline at end of file
+diff --git a/docs/ascend_tutorial/zh/model_support/examples/ascend_retool_best_practice.rst b/docs/ascend_tutorial/zh/model_support/examples/ascend_retool_best_practice.rst
+index 8a48e427..8ee4955d 100644
+--- a/docs/ascend_tutorial/zh/model_support/examples/ascend_retool_best_practice.rst
++++ b/docs/ascend_tutorial/zh/model_support/examples/ascend_retool_best_practice.rst
+@@ -70,13 +70,16 @@ ReTool论文参考([ReTool](https://arxiv.org/pdf/2504.11536))
+ 
+ .. code-block:: bash
+ 
+-  git clone https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k
++  export DATA_ROOT=${DATA_ROOT:-"$PWD"}
++  mkdir -p "$DATA_ROOT/dataset/BytedTsinghua-SIA" "$DATA_ROOT/dataset/Maxwell-Jia"
++  mkdir -p dataset/BytedTsinghua-SIA dataset/Maxwell-Jia
++  git clone https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k dataset/BytedTsinghua-SIA/DAPO-Math-17k "$DATA_ROOT/dataset/BytedTsinghua-SIA/DAPO-Math-17k"
+ 
+ **下载评估数据集**
+ 
+ .. code-block:: bash
+ 
+-  git clone https://huggingface.co/datasets/Maxwell-Jia/AIME_2024
++  git clone https://huggingface.co/datasets/Maxwell-Jia/AIME_2024 "$DATA_ROOT/dataset/Maxwell-Jia/AIME_2024"
+ 
+ **预训练数据预处理**
+ 
+@@ -277,5 +280,4 @@ https://github.com/bytedance/SandboxFusion
+     actor_rollout_ref.ref.use_torch_compile=False \
+     actor_rollout_ref.actor.entropy_checkpointing=True \
+     actor_rollout_ref.ref.entropy_checkpointing=True \
+-    actor_rollout_ref.ref.use_torch_compile=False \
+     trainer.total_epochs=1 $@ > $LOG_FILE 2>&1 &
+diff --git a/docs/ascend_tutorial/zh/model_support/examples/ascend_sglang_best_practices.rst b/docs/ascend_tutorial/zh/model_support/examples/ascend_sglang_best_practices.rst
+index 7975e63f..7bbf1919 100644
+--- a/docs/ascend_tutorial/zh/model_support/examples/ascend_sglang_best_practices.rst
++++ b/docs/ascend_tutorial/zh/model_support/examples/ascend_sglang_best_practices.rst
+@@ -5,6 +5,7 @@ Last updated: 06/02/2026.
+ 
+ .. _Qwen3-30B: https://github.com/verl-project/verl/blob/main/examples/ascend_extras/grpo_trainer/run_qwen3_30b_a3b_megatron.sh
+ .. _doclink: https://github.com/verl-project/verl/blob/c98cb8cc/docs/ascend_tutorial/examples/ascend_sglang_best_practices.rst
++
+ 引言
+ ----------------------------------
+ 
+@@ -34,13 +35,13 @@ SGLang 是当前主流的高性能开源推理引擎, 昇腾已经全面原生
+ .. code-block:: bash
+ 
+     cd verl
+-    git checkout 772c224
++    git checkout c98cb8cc
+ 模型训练与评估
+ -----------------------------------
+ 1.模型数据准备
+ ^^^^^^^^^^^
+ `Qwen3-30B`_
+-^^^^^^^^^^^
++~~~~~~~~~~~
+ **下载模型权重**
+ 
+ --local-dir: 模型保存路径
+@@ -61,7 +62,7 @@ SGLang 是当前主流的高性能开源推理引擎, 昇腾已经全面原生
+ .. code-block:: bash
+ 
+   python scripts/converter_hf_to_mcore.py \
+-      --hf_model_path Qwen/Qwen3-30B-A3B \
++      --hf_model_path /path/to/local_dir \
+       --output_path Qwen/Qwen3-30B-A3B-mcore \
+       --use_cpu_initialization    # Only work for MoE models
+ *注:verl通过Megatron-Bridge与MindSpeed-Bridge进行hf和mcore之间的权重转换,可以修改以下相关参数直接加载hf权重*
+@@ -223,7 +224,7 @@ SOCKET_IFNAME, HCCL_SOCKET_IFNAME, GLOO_SOCKET_IFNAME: 修改为对应通信网
+         dict(
+             attr="service",
+             type=VLLMCustomAPIChatStream,
+-            abbr='sgl-api-stream-chat',
++            abbr='vllm-api-stream-chat',
+             path="/path/to/Qwen3-30B", # 修改为 Qwen3-30B 模型路径
+             model="qwen3-30b",
+             request_rate = 0,
+@@ -261,7 +262,7 @@ SOCKET_IFNAME, HCCL_SOCKET_IFNAME, GLOO_SOCKET_IFNAME: 修改为对应通信网
+ 经过训练,模型在Math-500上的评分显著上升
+ 
+ +------+----------------------+---------+----------+------+----------------------+
+-| iter | dataset              | version | metric   | mode | sgl-api-stream-chat  |
++| iter | dataset              | version | metric   | mode | vllm-api-stream-chat  |
+ +======+======================+=========+==========+======+======================+
+ |   0  | math_prm800k_500     | c4b6f0  | accuracy | gen  | 	84.4             |
+ +------+----------------------+---------+----------+------+----------------------+
+diff --git a/docs/ascend_tutorial/zh/model_support/examples/ascend_vllm_best_practices.rst b/docs/ascend_tutorial/zh/model_support/examples/ascend_vllm_best_practices.rst
+index 379eac03..45ea5476 100644
+--- a/docs/ascend_tutorial/zh/model_support/examples/ascend_vllm_best_practices.rst
++++ b/docs/ascend_tutorial/zh/model_support/examples/ascend_vllm_best_practices.rst
+@@ -56,6 +56,7 @@ vLLM 是当前主流的高性能开源推理引擎, 昇腾已经全面原生支
+ .. code-block:: bash
+ 
+   git clone https://www.modelscope.cn/datasets/modelscope/gsm8k.git
++  # 该仓库默认分支不含 parquet 文件，需用自带 gsm8k.py 经 datasets 导出 train/test parquet 到 $RAY_DATA_HOME/dataset/gsm8k/
+ 
+ **HuggingFace To Megatron权重转换(可选)**
+ 
+@@ -85,7 +86,7 @@ vLLM 是当前主流的高性能开源推理引擎, 昇腾已经全面原生支
+     CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
+ 
+     # File System Paths
+-    TRAIN_FILE=$RAY_DATA_HOME/dataset/gsm8k/test.parquet
++    TRAIN_FILE=$RAY_DATA_HOME/dataset/gsm8k/train.parquet
+     TEST_FILE=$RAY_DATA_HOME/dataset/gsm8k/test.parquet
+ 
+     #保存频率，-1默认不保存，如需评测请修改此参数
+@@ -190,7 +191,7 @@ SOCKET_IFNAME, HCCL_SOCKET_IFNAME, GLOO_SOCKET_IFNAME: 修改为对应通信网
+ 
+ 不同模型步骤一致,仅以Qwen3-30b为例列举
+ 
+-我们通过 AISBenchmark 评估模型,该工具支持vllm/sglang多种推理后端的评估
++我们通过 AISBenchmark 评估模型,该工具支持vLLM/sglang多种推理后端的评估
+ 
+ **安装方法**
+ 
+@@ -220,7 +221,7 @@ SOCKET_IFNAME, HCCL_SOCKET_IFNAME, GLOO_SOCKET_IFNAME: 修改为对应通信网
+ 
+ python文件内容如下，host_port需与服务端的port一致，根据模型配置修改max_seq_len和max_out_len，推理示例设置为2k推20k：
+ 
+-.. code-block:: bash
++.. code-block:: python
+ 
+   from ais_bench.benchmark.models import VLLMCustomAPI
+ 
+diff --git a/docs/ascend_tutorial/zh/model_support/examples/dapo_multi_model_optimization_practice.md b/docs/ascend_tutorial/zh/model_support/examples/dapo_multi_model_optimization_practice.md
+index a6752c13..e990aba6 100644
+--- a/docs/ascend_tutorial/zh/model_support/examples/dapo_multi_model_optimization_practice.md
++++ b/docs/ascend_tutorial/zh/model_support/examples/dapo_multi_model_optimization_practice.md
+@@ -24,8 +24,8 @@ reward_model.reward_manager.name=dapo
+   `clip_ratio_low` 和 `clip_ratio_high` 用于指定 DAPO 目标函数中的 $\varepsilon_{\text {low }}$ 和 $\varepsilon_{\text {high }}$。
+ 
+ ```bash
+-clip_ratio_low=0.2  # 裁剪比例下限，默认值为0.2
+-clip_ratio_high=0.28 # 裁剪比例上限，默认值为0.28
++actor_rollout_ref.actor.clip_ratio_low=0.2  # 裁剪比例下限，默认值为0.2
++actor_rollout_ref.actor.clip_ratio_high=0.28 # 裁剪比例上限，DAPO 覆盖值；verl 默认值为 0.2
+ ```
+ 
+ - **动态采样的相关配置**
+@@ -61,7 +61,7 @@ reward_model.overlong_buffer.penalty_factor=${overlong_penalty_factor}   #惩罚
+ ## 硬件要求
+ 
+ 
+-当前支持Atlas 800T A3 与 Atlas 900 A3 SuperPoD。完成跑完本次最佳实践需要 1 台 Atlas 900 A3 SuperPoD。关键软件版本可以参考：[昇腾快速上手说明](https://github.com/verl-project/verl/blob/main/docs/ascend_tutorial/zh/get_start/quick_start.rst)
++当前支持Atlas 800T A3 与 Atlas 900 A3 SuperPoD。完成本次最佳实践需要 1 台 head + 1 台 worker 共 2 台 Atlas A3 训练系列产品（单机验证时相应设 NNODES=1）。关键软件版本可以参考：[昇腾快速上手说明](https://github.com/verl-project/verl/blob/main/docs/ascend_tutorial/zh/get_start/quick_start.rst)
+ 
+ 
+ ## 安装基础环境
+@@ -71,14 +71,14 @@ reward_model.overlong_buffer.penalty_factor=${overlong_penalty_factor}   #惩罚
+ | Python        | 3.11                                                       |
+ | CANN          | ==9.0.0.B160 (CANN900B160)                                 |
+ | torch         | ==2.9.0                                                    |
+-| torch_npu     | ==2.9.0                                                    |
++| torch_npu     | ==2.9.0.post2                                              |
+ | triton_ascend | ==3.2.1                                                    |
+ | verl          | main                                                       |
+ | vllm          | v0.18.0                                                    |
+ | vllm-ascend   | v0.18.0                                                    |
+ | transformers  | 5.3.0                                                      |
+ 
+-在本实践中，我们通过指定 verl 的 commit id 以避免引入其他问题。注意：main 分支可能会因迭代重构导致 patch 出问题，如需稳定版本可切换至 `release/v0.8.0`。
++在本实践中，我们在 verl 的 main 分支上复现，如需固定版本请检出具体的 commit id。注意：main 分支可能会因迭代重构导致 patch 出问题，如需稳定版本可切换至 `release/v0.8.0`。
+ 
+ ```bash
+ cd verl
+@@ -164,7 +164,7 @@ export USE_OPTIMIZED_MODEL=0
+ export VLLM_USE_V1=1
+ ```
+ 
+-- 昇腾多卡通信的兜底配置，延长连接超时时间，避免集群环境下训练启动因连接慢而失败
++- 昇腾多卡通信的兜底配置，显式统一连接超时时间（单位秒），避免集群环境下各节点取值不一致导致启动失败；示例值 300 小于 HCCL 默认值，属排障用的较短取值，初始化较慢时应调大。
+ 
+ ```bash
+ export HCCL_CONNECT_TIMEOUT=5400
+@@ -179,16 +179,16 @@ export VLLM_ASCEND_ENABLE_NZ=0
+ ### 训练
+ ```bash
+ # Model Weights Paths
+-MODEL_PATH=hf_weights/Qwen3-VL-30B-A3B-Instruct
+-RAY_DATA_HOME=${RAY_DATA_HOME:-"${HOME}/verl"}
+-CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
++export MODEL_PATH=hf_weights/Qwen3-VL-30B-A3B-Instruct
++export RAY_DATA_HOME=${RAY_DATA_HOME:-"${HOME}/verl"}
++export CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
+ 
+ # File System Paths
+-TRAIN_FILE=$RAY_DATA_HOME/datasets/geo3k/train.parquet
+-TEST_FILE=$RAY_DATA_HOME/datasets/geo3k/test.parquet
++export TRAIN_FILE=$RAY_DATA_HOME/datasets/geo3k/train.parquet
++export TEST_FILE=$RAY_DATA_HOME/datasets/geo3k/test.parquet
+ 
+ # 保存频率，-1默认不保存，如需评测请修改此参数
+-trainer.save_freq=-1
++# 将 trainer.save_freq=-1 作为训练脚本的 Hydra 覆盖项传入，不要放在 shell 变量块中
+ ```
+ 
+ - 对于单机任务 Qwen3-VL-30B ，可以使用以下脚本将训练拉起。
+diff --git a/docs/ascend_tutorial/zh/model_support/examples/gspo_optimization_practice.md b/docs/ascend_tutorial/zh/model_support/examples/gspo_optimization_practice.md
+index f9a2feb0..3302bb22 100644
+--- a/docs/ascend_tutorial/zh/model_support/examples/gspo_optimization_practice.md
++++ b/docs/ascend_tutorial/zh/model_support/examples/gspo_optimization_practice.md
+@@ -74,7 +74,7 @@ git clone https://huggingface.co/datasets/Maxwell-Jia/AIME_2024
+ 
+ ### jemalloc安装
+ 
+-为了确保 Ray 进程能够正常回收内存，需要安装并使能 jemalloc 库进行内存管理。
++为了确保 Ray 进程能够正常回收内存，建议安装并使能 jemalloc 库进行内存管理（该优化为可选配置，训练脚本默认关闭，选定有效库后再启用，详见 OpenEuler 一节）。
+ 
+ #### Ubuntu 操作系统
+ 
+@@ -242,7 +242,7 @@ infer_ppo_max_token_len=$(((max_prompt_length + max_response_length) / sp_size))
+ 
+ 推理算子下发方面的优化，平均能有 `15%~20%`左右的性能收益。
+ 
+-先看单开**ACLgraph**，如下：
++先看开启 **ACLgraph** 并叠加 **FULL_DECODE_ONLY** 的配置，如下：
+ 
+ ```bash
+ # 开启ACLgraph+FULL_DECODE_ONLY（注意：当设置此参数为False时，TASK_QUEUE_ENABLE必须设置为1，不然会报错）
+@@ -253,7 +253,7 @@ actor_rollout_ref.rollout.engine_kwargs.vllm.compilation_config.cudagraph_mode='
+ 
+ `FULL_DECODE_ONLY`开启成功后有如下输出：
+ 
+-![FULL_DECODE_ONLY result](https://github.com/wucong25/verl-data/blob/main/ascend_acl_graph.png)
++![FULL_DECODE_ONLY result](https://raw.githubusercontent.com/wucong25/verl-data/main/ascend_acl_graph.png)
+ 
+ **`cudagraph_capture_sizes`参数设置指南**
+ 
+@@ -261,13 +261,13 @@ cudagraph_capture_sizes设置的值对应的是批大小，这里的批大小不
+ 
+ 默认生成的算法如下，可做参考
+ 
+-![cudagraph_capture_sizes](https://github.com/wucong25/verl-data/blob/main/ascend_set_cudagraph_sizes.png)
++![cudagraph_capture_sizes](https://raw.githubusercontent.com/wucong25/verl-data/main/ascend_set_cudagraph_sizes.png)
+ 
+ ##### 推理后端切换
+ 
+ 使用方式：`export VLLM_ATTENTION_BACKEND=XFORMERS`
+ 
+-![VLLM_ATTENTION_BACKEND](https://github.com/wucong25/verl-data/blob/main/ascend_vllm_attn_backend.png)
++![VLLM_ATTENTION_BACKEND](https://raw.githubusercontent.com/wucong25/verl-data/main/ascend_vllm_attn_backend.png)
+ 
+ 注：需要注意某些后端在一些比较老的vllm-ascend版本内并不支持
+ 
+@@ -294,7 +294,7 @@ HCCL_OP_EXPANSION_MODE环境变量用于配置通信算法的编排展开位置
+ 
+ ##### HOST展开
+ 
+-<img src="https://github.com/wucong25/verl-data/blob/main/ascend_task_queue1.png" alt="image-20260113194257095" style="zoom:50%;" />
++<img src="https://raw.githubusercontent.com/wucong25/verl-data/main/ascend_task_queue1.png" alt="image-20260113194257095" style="zoom:50%;" />
+ 
+ - 软件栈工作在host CPU，通信算法展开一个个task
+ - 每个task调用runtime接口，下发到device的rtsqueue
+@@ -304,7 +304,7 @@ HCCL_OP_EXPANSION_MODE环境变量用于配置通信算法的编排展开位置
+ 
+ ##### AICPU机制展开
+ 
+-<img src="https://github.com/wucong25/verl-data/blob/main/ascend_task_queue3.png" alt="image-20260113194333218" style="zoom:50%;" />
++<img src="https://raw.githubusercontent.com/wucong25/verl-data/main/ascend_task_queue3.png" alt="image-20260113194333218" style="zoom:50%;" />
+ 
+ - host侧不下发一个个task，把通信算子作为一个个kernel，放在通信算子kernel的队列上去。
+ - STARS调度kernel队列流上的kernel，把kernel放到AiCPU上去执行。
+@@ -320,9 +320,9 @@ TASK_QUEUE_ENABLE，下发优化，图模式设置为1（即开启图模式的
+ 
+ 示意图：
+ 
+-![ascend task queue](https://github.com/wucong25/verl-data/blob/main/ascend_task_queue2.png)
++![ascend task queue](https://raw.githubusercontent.com/wucong25/verl-data/main/ascend_task_queue2.png)
+ 
+-##### 绑核优化
++#### 绑核优化
+ 
+ **使用方式：**`export CPU_AFFINITY_CONF=1`
+ 
+@@ -368,7 +368,7 @@ TASK_QUEUE_ENABLE，下发优化，图模式设置为1（即开启图模式的
+ 
+ 启用 MLP 层的权重预取机制
+ 
+-<img src="https://github.com/wucong25/verl-data/blob/main/ascend_prefetch.png" alt="image-20251124173132677" style="zoom:50%;" />
++<img src="https://raw.githubusercontent.com/wucong25/verl-data/main/ascend_prefetch.png" alt="image-20251124173132677" style="zoom:50%;" />
+ 
+ ### verl框架参数设置
+ 
+diff --git a/docs/ascend_tutorial/zh/model_support/examples/qwen3_5_megatron_npu.md b/docs/ascend_tutorial/zh/model_support/examples/qwen3_5_megatron_npu.md
+index b26826c5..53e0ccea 100644
+--- a/docs/ascend_tutorial/zh/model_support/examples/qwen3_5_megatron_npu.md
++++ b/docs/ascend_tutorial/zh/model_support/examples/qwen3_5_megatron_npu.md
+@@ -40,7 +40,7 @@ Last updated: 11/03/2026.
+ | model | nnodes | devices per node | TP | PP | CP | EP | ETP | GEN_DP | GEN_TP | GEN_EP |
+ | --- |--------| --- | --- | --- | --- |----| --- |---|----|----|
+ | Qwen3.5-35B-A3B | 1 | 16 | 2 | 2 | 1 | 8  | 1 | 1 | 8 | 1 |
+-| Qwen3.5-122B-A10B | 4 | 16 | 2 | 4 | 1 | 16 | 1 | 1 | 16 | 1 |
++| Qwen3.5-122B-A10B | 4 | 16 | 2 | 4 | 1 | 16 | 1 | 16 | 2 | 32 |
+ | Qwen3.5-397B-A17B | 16 | 16 | 2 | 4 | 1 | 64 | 1 | 16 | 16 | 256 |
+ 
+ ## 数据和模型准备
+@@ -136,8 +136,8 @@ bash examples/grpo_trainer/run_qwen3_5_397b_megatron.sh
+ ```bash
+ DEVICE=npu \
+ HF_MODEL_PATH=/path/to/Qwen3.5-397B-A17B \
+-train_files=/path/to/train.parquet \
+-test_files=/path/to/test.parquet \
++train_path=/path/to/train.parquet \
++test_path=/path/to/test.parquet \
+ save_path=/path/to/checkpoints \
+ NDEVICES_PER_NODE=16 \
+ nnodes=16 \
+@@ -147,5 +147,5 @@ bash examples/grpo_trainer/run_qwen3_5_397b_megatron.sh
+ ## 注意事项
+ 
+ - 脚本会通过 `torch_npu` 自动识别 NPU 环境；如需手动指定，设置 `DEVICE=npu`。
+-- Qwen3.5 的 Gated Delta Net 当前不使用 packed sequence，因此脚本中保持 `use_remove_padding=False` 和 `use_dynamic_bsz=False`。
++- Qwen3.5 的 Gated Delta Net 当前不使用 packed sequence，因此 35B 脚本的 NPU 分支会通过 `use_remove_padding=True`、`use_dynamic_bsz=True` 开启 packed sequence，122B/397B 脚本仍保持 `use_remove_padding=False` 和 `use_dynamic_bsz=False`。
+ - NPU 分支会设置 `use_flash_attn=True`、`moe_token_dispatcher_type=alltoall` 等 Ascend 适配参数。
+diff --git a/docs/ascend_tutorial/zh/model_support/model_and_algorithm_support.md b/docs/ascend_tutorial/zh/model_support/model_and_algorithm_support.md
+index 8809feee..73da527f 100644
+--- a/docs/ascend_tutorial/zh/model_support/model_and_algorithm_support.md
++++ b/docs/ascend_tutorial/zh/model_support/model_and_algorithm_support.md
+@@ -40,14 +40,14 @@ Last updated: 09/21/2026.
+ | 34 | Qwen3-VL-30B-A3B-Instruct | DAPO | [30B](https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Instruct) | FSDP2 | vllm | [`link`](https://github.com/verl-project/verl-recipe/blob/main/dapo/run_dapo_qwen3_vl_30b_fsdp2_npu.sh) | - | Atlas 200T A2 Box16, Atlas 800T A3 |
+ | 35 | Qwen3.5-27B | GRPO | [27B](https://huggingface.co/Qwen/Qwen3.5-27B) | FSDP2 | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/grpo_trainer/run_qwen3_5_27b_fsdp.sh) | - | Atlas 900 A2 PoD, Atlas 200T A2 Box16, Atlas 800T A3 |
+ | 36 | Qwen3.5-35B-A3B | GRPO | [35B](https://huggingface.co/Qwen/Qwen3.5-35B-A3B) | FSDP2 | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/grpo_trainer/run_qwen3_5_35b_fsdp.sh) | - | Atlas 200T A2 Box16, Atlas 800T A3 |
+-| 37 | Qwen3.5-122B-A10B | GRPO | [122B](https://huggingface.co/Qwen/Qwen3.5-122B-A10B) | Megatron | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/ascend_extras/grpo_trainer/run_qwen3_5_122b_a10b_32k_megatron.sh) | [`link`](examples/qwen3_5_megatron_npu.md) | Atlas 800T A3 |
++| 37 | Qwen3.5-122B-A10B | GRPO | [122B](https://huggingface.co/Qwen/Qwen3.5-122B-A10B) | Megatron | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/grpo_trainer/run_qwen3_5_122b_a10b_megatron.sh) | [`link`](examples/qwen3_5_megatron_npu.md) | Atlas 800T A3 |
+ | 38 | Qwen3-Next-80B-A3B-Instruct | GRPO | [80B](https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct) | FSDP2 | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/ascend_extras/grpo_trainer/run_qwen3_next_80b_fsdp.sh) | - | Atlas 900 A2 PoD, Atlas 200T A2 Box16, Atlas 800T A3 |
+ | 39 | DeepSeek-V3 | DAPO | [671B](https://huggingface.co/deepseek-ai/DeepSeek-V3-Base/) | Megatron | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/dapo/DeepSeek-V3/scripts/run_dapo_deepseekv3_671b_megatron_8k_npu.sh) | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/dapo/DeepSeek-V3/README.md) | Atlas 800T A3 |
+ | 40 | Qwen3-1.7B | GRPO | [1.7B](https://huggingface.co/Qwen/Qwen3-1.7B) | VeOmni | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/verl_ascend_practice/run_qwen3_1_7b_npu.sh) | - | Atlas 800T A3 |
+ | 41 | Qwen3-30B-A3B | GRPO | [30B](https://huggingface.co/Qwen/Qwen3-30B-A3B) | VeOmni | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/grpo_trainer/run_qwen3_30b_veomni.sh) | - | Atlas 800T A3 |
+ | 42 | Qwen3-VL-30B-A3B-Instruct | GRPO | [30B](https://huggingface.co/Qwen/Qwen3-VL-30B-A3B-Instruct) | VeOmni | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/grpo_trainer/run_qwen3_vl_30b_moe_veomni.sh) | - | Atlas 800T A3 |
+-| 43 | DeepSeek-V4-Flash | GRPO | [284B](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash ) | MindSpeed-llm | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/DeepSeek-V4-Flash/examples/train_deepseek_v4_grpo_mindspeed_vllm.sh) | - | Atlas 800T A3 |
+-| 44 | DeepSeek-V4-Flash | GRPO | [284B](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash ) | MindSpeed-llm | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/DeepSeek-V4-Flash/examples/train_deepseek_v4_grpo_mindspeed_vllm_A5.sh) | - | Ascend 950PR&950DT系列产品 |
++| 43 | DeepSeek-V4-Flash | GRPO | [284B](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash) | MindSpeed-llm | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/DeepSeek-V4-Flash/examples/train_deepseek_v4_grpo_mindspeed_vllm.sh) | - | Atlas 800T A3 |
++| 44 | DeepSeek-V4-Flash | GRPO | [284B](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash) | MindSpeed-llm | vllm | [`link`](https://github.com/verl-project/verl-ascend-recipe/blob/main/DeepSeek-V4-Flash/examples/train_deepseek_v4_grpo_mindspeed_vllm_A5.sh) | - | Ascend 950PR&950DT系列产品 |
+ | 45 | Qwen3.8-27B | GRPO | [27B](https://huggingface.co/Qwen/Qwen3.8-27B) | Megatron | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/grpo_trainer/run_qwen3_8_27b_megatron.sh) | - | Atlas 800T A3 |
+ | 46 | GLM-5.2 | GRPO | [753B](https://huggingface.co/zai-org/GLM-5.2) | Megatron | vllm | [`link`](https://github.com/verl-project/verl/blob/main/examples/ascend_extras/grpo_trainer/run_glm5_2_megatron.sh) | - | Atlas 800T A3 |
+ 
