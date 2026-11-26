@@ -69,7 +69,10 @@ MindSpeed     ``26.2.0_core_r0.18.0``                           Megatron-LM 在�
    对齐；xgrammar 使用 `vLLM 0.30.0 的依赖范围 <https://github.com/vllm-project/vllm/blob/v0.30.0/requirements/common.txt>`_。
    使用 triton-ascend 提供的 Triton 实现，无需另行安装 triton 软件包。
    当前两个上游存在 FastAPI 约束冲突：vLLM 要求 ``>=0.133.0,<0.137.0``，vLLM-Ascend 要求 ``<0.124.0``，
-   没有同时满足两者的版本。需先解决该冲突，再使用 ``pip check`` 检查最终环境并验证运行兼容性。
+   没有同时满足两者的版本。安装时需显式固定 FastAPI 版本：先按 vLLM 要求安装
+   ``fastapi>=0.133.0,<0.137.0``，再用 ``--no-deps`` 安装 vllm-ascend，避免其 requirements
+   覆盖该版本；随后使用 ``pip check`` 检查最终环境并验证运行兼容性。若仍需完整可用环境，
+   建议直接使用与 vLLM 0.23.0 配套的已发布镜像。
 
 
 Megatron 训练后端还需安装以下 Bridge 组件：
@@ -91,7 +94,7 @@ Megatron 训练后端还需安装以下 Bridge 组件：
 安装前准备（ CANN）
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-CANN是NPU上的异构计算架构，以下为arm平台950PR&DT系列产品安装指令，请参照如下指令下载HDK和CANN并安装，
+CANN是NPU上的异构计算架构，以下为arm平台950PR&DT系列产品安装指令，请参照如下指令下载CANN并安装；950系列HDK/驱动由宿主机镜像提供，请按宿主机实际版本核对，安装后确认驱动版本与 CANN 匹配，
 或者根据系统硬件型号从 `CANN社区 <https://www.hiascend.com/cann/download>`_ 下载安装
 
 .. code:: bash
@@ -111,6 +114,8 @@ CANN是NPU上的异构计算架构，以下为arm平台950PR&DT系列产品安�
 
 源码安装
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+本文件各后端采用下列手工安装步骤，安装脚本入口与 install_guidance.rst 一致。
 
 vLLM推理后端支持
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -176,6 +181,7 @@ verl 依赖安装
 .. code:: bash
 
     git clone https://github.com/verl-project/verl.git
+    # 请检出与本文档版本表匹配的 verl tag 或 release 分支，例如 git checkout <verl-tag>
     # 向 Megatron-Bridge 源码应用兼容性补丁
     git -C Megatron-Bridge apply --unidiff-zero \
         "$(pwd)/verl/docker/ascend/patches/megatron_bridge_qwen3_asr.patch"
