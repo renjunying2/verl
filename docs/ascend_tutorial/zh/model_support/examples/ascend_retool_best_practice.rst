@@ -37,15 +37,6 @@ ReTool论文参考([ReTool](https://arxiv.org/pdf/2504.11536))
   git clone https://github.com/volcengine/verl.git
   cd verl
 
-再按上表版本创建并激活 Conda 环境，安装 torch、torch_npu、vLLM、vLLM-Ascend 等依赖：
-
-.. code-block:: bash
-
-  conda create -n retool python=3.11 -y
-  conda activate retool
-  pip install torch==2.9.0 torch_npu==2.9.0
-  # 按上表安装与 CANN 匹配的 vLLM / vLLM-Ascend 版本
-
 .. list-table::
    :header-rows: 1
 
