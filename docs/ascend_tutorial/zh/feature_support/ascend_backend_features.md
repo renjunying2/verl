@@ -377,7 +377,7 @@ Checkpoint Engine 是 verl 用于在训练侧与推理侧之间同步权重的�
 | verl参数 | 简介|
 | --- | --- |
 | `actor_rollout_ref.rollout.checkpoint_engine.backend` |Checkpoint Engine 后端，设置为 `mooncake`|
-| `actor_rollout_ref.rollout.checkpoint_engine.update_weights_bucket_megabytes` |单次权重传输的桶大小（MB），默认值为2048|
+| `actor_rollout_ref.rollout.checkpoint_engine.update_weights_bucket_megabytes` |单次权重传输的桶大小（MB），默认值为2 GB|
 | `actor_rollout_ref.rollout.checkpoint_engine.engine_kwargs.mooncake.device` |Checkpoint Engine 运行设备，NPU 上需设置为 `npu`|
 | `actor_rollout_ref.rollout.checkpoint_engine.engine_kwargs.mooncake.device_name` |Mooncake 设备名过滤，默认值为空|
 
