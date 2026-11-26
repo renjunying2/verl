@@ -85,7 +85,7 @@ vLLM 是当前主流的高性能开源推理引擎, 昇腾已经全面原生支�
     CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
 
     # File System Paths
-    TRAIN_FILE=$RAY_DATA_HOME/dataset/gsm8k/test.parquet
+    TRAIN_FILE=$RAY_DATA_HOME/dataset/gsm8k/train.parquet
     TEST_FILE=$RAY_DATA_HOME/dataset/gsm8k/test.parquet
 
     #保存频率，-1默认不保存，如需评测请修改此参数
@@ -190,7 +190,7 @@ SOCKET_IFNAME, HCCL_SOCKET_IFNAME, GLOO_SOCKET_IFNAME: 修改为对应通信网�
 
 不同模型步骤一致,仅以Qwen3-30b为例列举
 
-我们通过 AISBenchmark 评估模型,该工具支持vllm/sglang多种推理后端的评估
+我们通过 AISBenchmark 评估模型,该工具支持vLLM/sglang多种推理后端的评估
 
 **安装方法**
 
@@ -220,7 +220,7 @@ SOCKET_IFNAME, HCCL_SOCKET_IFNAME, GLOO_SOCKET_IFNAME: 修改为对应通信网�
 
 python文件内容如下，host_port需与服务端的port一致，根据模型配置修改max_seq_len和max_out_len，推理示例设置为2k推20k：
 
-.. code-block:: bash
+.. code-block:: python
 
   from ais_bench.benchmark.models import VLLMCustomAPI
 

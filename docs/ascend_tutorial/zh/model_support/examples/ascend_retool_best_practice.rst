@@ -70,13 +70,15 @@ ReTool论文参考([ReTool](https://arxiv.org/pdf/2504.11536))
 
 .. code-block:: bash
 
-  git clone https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k
+  export DATA_ROOT=${DATA_ROOT:-"$PWD"}
+  mkdir -p "$DATA_ROOT/dataset/BytedTsinghua-SIA" "$DATA_ROOT/dataset/Maxwell-Jia"
+  git clone https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k "$DATA_ROOT/dataset/BytedTsinghua-SIA/DAPO-Math-17k"
 
 **下载评估数据集**
 
 .. code-block:: bash
 
-  git clone https://huggingface.co/datasets/Maxwell-Jia/AIME_2024
+  git clone https://huggingface.co/datasets/Maxwell-Jia/AIME_2024 "$DATA_ROOT/dataset/Maxwell-Jia/AIME_2024"
 
 **预训练数据预处理**
 

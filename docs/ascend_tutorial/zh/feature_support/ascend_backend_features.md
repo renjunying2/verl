@@ -395,5 +395,5 @@ actor_rollout_ref.rollout.checkpoint_engine.backend=nccl
 
 # 方式二：mooncake 后端（NPU 上需指定 device 为 npu）
 actor_rollout_ref.rollout.checkpoint_engine.backend=mooncake
-+actor_rollout_ref.rollout.checkpoint_engine.engine_kwargs.mooncake.device=npu
+actor_rollout_ref.rollout.checkpoint_engine.engine_kwargs.mooncake.device=npu
 ```
