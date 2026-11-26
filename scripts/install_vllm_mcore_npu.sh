@@ -30,7 +30,7 @@ if [ $USE_MEGATRON -eq 1 ]; then
     # 下载 MindSpeed，切换到指定 commit-id，并下载 Megatron 相关依赖
     git clone https://gitcode.com/Ascend/MindSpeed.git
     cd MindSpeed && git checkout core_r0.18.0 && cd ..
-    git clone --depth 1 --branch core_r0.18.0 https://github.com/NVIDIA/Megatron-LM.git
+    git clone --depth 1 --branch core_v0.18.2 https://github.com/NVIDIA/Megatron-LM.git
     git clone --depth 1 --branch core_r0.18.0 https://gitcode.com/ascend/MegatronAdaptor.git
     git clone --depth 1 https://gitcode.com/ascend/TransformerEngineNPU.git
     git clone --depth 1 https://gitcode.com/ascend/MindSpeed-Ops.git

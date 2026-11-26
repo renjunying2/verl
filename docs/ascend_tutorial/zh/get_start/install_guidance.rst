@@ -6,8 +6,7 @@ Last updated: 09/29/2026.
 关键更新
 --------
 
--  2026/08/29：将 MindSpeed / Megatron-LM 从 ``core_r0.16.0`` 更新为
-   ``core_r0.18.0``\ 。弃用mbridge，改用Megatron-Bridge，Megatron-Bridge 版本为 ``0.5.0``\ 。
+-  2026/08/29：将 MindSpeed 从 ``core_r0.16.0`` 更新为 ``core_r0.18.0``\ ，Megatron-LM 更新为 ``core_v0.18.2``\ 。弃用mbridge，改用Megatron-Bridge，Megatron-Bridge 版本为 ``0.5.0``\ 。
 -  2026/08/03：将 vLLM / vLLM-Ascend 从 ``0.18.0`` 更新为 ``0.23.0``\ ，vLLM
    对应基础环境版本同步调整为 torch ``2.10.0``\ 、torch_npu ``2.10.0.post2``\ 。
 -  2026/05/13：vLLM 已按 `PR
@@ -98,7 +97,7 @@ triton-ascend ``3.2.2``                               NPU Triton 适配，安装
 transformers  ``5.10.4``                              Hugging Face 大模型库，提供模型架构与预训练权重
 vLLM          ``0.23.0``                              高性能 LLM 推理与服务引擎
 vLLM-Ascend   ``0.23.0``                              NPU vLLM 后端适配  
-Megatron-LM   ``core_r0.18.0``                        大规模分布式训练框架
+Megatron-LM   ``core_v0.18.2``                        大规模分布式训练框架
 MindSpeed     ``core_r0.18.0``                        Megatron-LM 在昇腾 NPU 上的适配和优化组件
 ============= ======================================= ===================
 
@@ -172,12 +171,12 @@ SGLang        ``v0.5.10``                             高性能 LLM 推理引擎
 triton        ``3.5.0``                               Triton，用于编写自定义算子
 triton-ascend ``3.2.2``                               NPU Triton 适配，安装命令需参考脚本 `安装脚本 <../../../../scripts/install_vllm_mcore_npu.sh>`_
 transformers  ``5.10.4``                               Hugging Face 大模型库，提供模型架构与预训练权重
-Megatron-LM   ``core_r0.18.0``                        大规模分布式训练框架
+Megatron-LM   ``core_v0.18.2``                        大规模分布式训练框架
 MindSpeed     ``core_r0.18.0``                        Megatron-LM 在昇腾 NPU 上的适配和优化组件
 ============= ======================================= ===================
 
 昇腾 Megatron 依赖组合以 ``install_vllm_mcore_npu.sh`` 为基准：
-Megatron-LM、MindSpeed、MegatronAdaptor 使用 ``core_r0.18.0``，
+Megatron-LM 使用 ``core_v0.18.2``，MindSpeed、MegatronAdaptor 使用 ``core_r0.18.0``，
 Megatron-Bridge 使用 ``v0.5.0``；MindSpeed-Bridge 使用仓库默认分支，
 当前未固定 tag 或 commit。SGLang 安装脚本和当前 CI 镜像构建文件使用同一组合。
 
