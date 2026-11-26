@@ -62,8 +62,8 @@ vLLM 是当前主流的高性能开源推理引擎, 昇腾已经全面原生支�
 .. code-block:: bash
 
   python scripts/converter_hf_to_mcore.py \
-      --hf_model_path Qwen/Qwen3-30B-A3B-Base \
-      --output_path Qwen/Qwen3-30B-A3B-Base-mcore \
+      --hf_model_path /path/to/local_dir \
+      --output_path /path/to/Qwen3-30B-A3B-Base-mcore \
       --use_cpu_initialization    # Only work for MoE models
 *注:verl当前已支持mbridge进行灵活的hf和mcore之间的权重转换,可以修改以下相关参数直接加载hf权重*
 
@@ -205,7 +205,7 @@ SOCKET_IFNAME, HCCL_SOCKET_IFNAME, GLOO_SOCKET_IFNAME: 修改为对应通信网�
 
 .. code-block:: bash
 
-  cd /examples/benchmark/ais_bench/datasets
+  cd examples/benchmark/ais_bench/datasets
   mkdir aime/
   cd aime/
   wget https://opencompass.oss-cn-shanghai.aliyuncs.com/datasets/data/aime.zip
@@ -216,7 +216,7 @@ SOCKET_IFNAME, HCCL_SOCKET_IFNAME, GLOO_SOCKET_IFNAME: 修改为对应通信网�
 
 .. code-block:: bash
 
-   vim /examples/benchmark/ais_bench/benchmark/configs/models/vllm_api/vllm_api_general.py
+   vim examples/benchmark/ais_bench/benchmark/configs/models/vllm_api/vllm_api_general.py
 
 python文件内容如下，host_port需与服务端的port一致，根据模型配置修改max_seq_len和max_out_len，推理示例设置为2k推20k：
 
@@ -266,8 +266,8 @@ port：可任意设置空闲端口；
       --served-model-name auto \
       --gpu-memory-utilization 0.9 \
       --max-num-seqs 24 \
-      --max-model-len 10240 \
-      --max-num-batched-tokens 10240 \
+      --max-model-len 22528 \
+      --max-num-batched-tokens 22528 \
       --enforce-eager \
       --trust-remote-code \
       --distributed_executor_backend=mp \

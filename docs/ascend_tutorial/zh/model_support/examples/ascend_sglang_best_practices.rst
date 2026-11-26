@@ -84,6 +84,7 @@ SGLang 是当前主流的高性能开源推理引擎, 昇腾已经全面原生�
     CKPTS_DIR=${CKPTS_DIR:-"${RAY_DATA_HOME}/ckpts/${project_name}/${exp_name}"}
 
     # File System Paths
+    # 需先准备以下文件：$RAY_DATA_HOME/dataset/dapo-math-17k.parquet 和 $RAY_DATA_HOME/dataset/aime-2024.parquet
     TRAIN_FILE=$RAY_DATA_HOME/dataset/dapo-math-17k.parquet
     TEST_FILE=$RAY_DATA_HOME/dataset/aime-2024.parquet
 
@@ -94,7 +95,7 @@ SGLang 是当前主流的高性能开源推理引擎, 昇腾已经全面原生�
 
 .. code-block:: bash 
 
-  bash examples/grpo_trainer/run_qwen3moe-30b_sglang_megatron_npu.sh
+  bash examples/ascend_extras/grpo_trainer/run_qwen3_30b_a3b_megatron.sh
 如果您想扩展至多节点，我们推荐使用以下脚本进行大规模多节点训练拉起
 
 .. code-block:: bash

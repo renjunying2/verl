@@ -198,7 +198,7 @@ class MindSpeedFeature:
         in case that megatron validate fails.
         for example:
             ```python
-            origin_context_parallel_size = args.context_parallel_size
+            self.origin_context_parallel_size = args.context_parallel_size
             args.context_parallel_size = 1
             ```
         """
@@ -209,7 +209,7 @@ class MindSpeedFeature:
 
         for example:
         ```python
-        args.context_parallel_size = origin_context_parallel_size
+        args.context_parallel_size = self.origin_context_parallel_size
         ```
         """
         pass
@@ -362,7 +362,7 @@ Checkpoint Engine 是 verl 用于在训练侧与推理侧之间同步权重的�
 | verl参数 | 简介|
 | --- | --- |
 | `actor_rollout_ref.rollout.checkpoint_engine.backend` |Checkpoint Engine 后端，NPU 上设置为 `nccl` 时自动识别为 HCCL 后端|
-| `actor_rollout_ref.rollout.checkpoint_engine.update_weights_bucket_megabytes` |单次权重传输的桶大小（MB），默认值为2048。HCCL 采用双缓冲收发，NPU 显存开销为 2 倍桶大小；该值需大于模型中最大权重张量的内存占用，不足时可调大（如4096）|
+| `actor_rollout_ref.rollout.checkpoint_engine.update_weights_bucket_megabytes` |单次权重传输的桶大小（MB），默认值为2 GB。HCCL 采用双缓冲收发，NPU 显存开销为 2 倍桶大小；该值需大于模型中最大权重张量的内存占用，不足时可调大（如4 GB）|
 | `actor_rollout_ref.rollout.checkpoint_engine.engine_kwargs.nccl.group_name` |HCCL 进程组名称，默认值为default|
 | `actor_rollout_ref.rollout.checkpoint_engine.engine_kwargs.nccl.rebuild_group` |是否在每次权重更新时重建 HCCL 进程组，默认值为False|
 

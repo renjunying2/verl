@@ -76,21 +76,21 @@ models = [
         attr="service",
         type=VLLMCustomAPIChatStream,
         abbr='vllm-api-stream-chat',
-        path="",
-        model="",
-        request_rate = 0,
-        retry = 2,
-        host_ip = "localhost",
-        host_port = 8080,
-        max_out_len = 512,
-        batch_size=1,
+        path="",              # 模型/tokenizer 目录，替换为实际路径
+        model="",             # 与 --served-model-name 一致
+        request_rate = 0,     # 请求发送速率，0 表示不限制
+        retry = 2,            # 请求失败重试次数
+        host_ip = "localhost",# 推理服务 IP
+        host_port = 8080,     # 与服务端 --port 保持一致
+        max_out_len = 512,    # 单次输出最大 token 数
+        batch_size=1,         # 并发请求数
         trust_remote_code=False,
         generation_kwargs = dict(
-            temperature = 0.5,
-            top_k = 10,
-            top_p = 0.95,
-            seed = None,
-            repetition_penalty = 1.03,
+            temperature = 0.5,      # 采样温度
+            top_k = 10,             # top-k 采样
+            top_p = 0.95,           # top-p 采样
+            seed = None,            # 随机种子，None 表示不固定
+            repetition_penalty = 1.03,  # 重复惩罚系数
         ),
         pred_postprocessor=dict(type=extract_non_reasoning_content)
     )

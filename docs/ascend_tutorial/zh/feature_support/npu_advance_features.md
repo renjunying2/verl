@@ -164,7 +164,7 @@ repatch
 
 | 特性 | 推理/训练 | 说明 |
 |:---|:---|:---|
-| 分块预填充 (`enable_chunked_prefill`) | 推理 (vLLM) | 大预填充分块并与解码 batch 处理 |
+| 分块预填充 (`enable_chunked_prefill`) | 推理 (vLLM) | 大预填充分块并与解码 batch 并行处理 |
 | 前缀缓存 (`enable_prefix_caching`) | 推理 (vLLM) | 自动缓存共享前缀，减少重复计算 |
 | Flash Attention | 训练 (Megatron) | 使用 Flash Attention 加速注意力计算，默认启用 |
 | 融合旋转位置编码 (`use_fused_rotary_pos_emb`) | 训练 (Megatron) | 融合算子加速 RoPE |
